@@ -1758,6 +1758,15 @@ config ARCH_BOARD_LINUM_STM32H753BI
 	---help---
 		The Linum board is based on the STMicro STM32H753BI MCU.
 
+config ARCH_BOARD_NUCLEO_H753ZI
+	bool "STM32H743 Nucleo H753ZI"
+	depends on ARCH_CHIP_STM32H753ZI
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+# TODO:	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		STMicro Nucleo H753ZI board based on the STMicro STM32H743ZI MCU.
+		
 config ARCH_BOARD_OPENH743I
 	bool "Waveshare OpenH743I board"
 	depends on ARCH_CHIP_STM32H743II
@@ -3270,6 +3279,7 @@ config ARCH_BOARD
 	default "nucleo-g070rb"             if ARCH_BOARD_NUCLEO_G070RB
 	default "nucleo-g071rb"             if ARCH_BOARD_NUCLEO_G071RB
 	default "nucleo-h743zi"             if ARCH_BOARD_NUCLEO_H743ZI
+	default "nucleo-h753zi"             if ARCH_BOARD_NUCLEO_H753ZI
 	default "nucleo-h743zi2"            if ARCH_BOARD_NUCLEO_H743ZI2
 	default "nucleo-h745zi"             if ARCH_BOARD_NUCLEO_H745ZI
 	default "stm32h745i-disco"          if ARCH_BOARD_STM32H745I_DISCO
@@ -3900,6 +3910,9 @@ source "boards/arm/stm32h7/stm32h747i-disco/Kconfig"
 endif
 if ARCH_BOARD_NUCLEO_H743ZI
 source "boards/arm/stm32h7/nucleo-h743zi/Kconfig"
+endif
+if ARCH_BOARD_NUCLEO_H753ZI
+source "boards/arm/stm32h7/nucleo-h753zi/Kconfig"
 endif
 if ARCH_BOARD_NUCLEO_H743ZI2
 source "boards/arm/stm32h7/nucleo-h743zi2/Kconfig"
