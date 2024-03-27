@@ -45,4 +45,14 @@ function(nuttx_generate_outputs target)
     add_custom_target(${target}-bin ALL DEPENDS ${target}.bin)
     file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.bin\n")
   endif()
+
+  if(CONFIG_ELF_32_L)
+  add_custom_command(
+    OUTPUT ${target}.elf
+    COMMAND ${CMAKE_OBJCOPY} -O elf32-little ${target} ${target}.elf
+    DEPENDS ${target})
+  add_custom_target(${target}-elf ALL DEPENDS ${target}.elf)
+  file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.elf\n")
+  endif()
+
 endfunction(nuttx_generate_outputs)
