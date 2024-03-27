@@ -384,6 +384,15 @@ endmenu # Build Setup
 
 menu "Binary Output Formats"
 
+config ELF_32_L
+	bool "ELF 32 binary format"
+	default y
+	---help---
+		Create the nuttx.elf in the ELF-32 little endian format that is
+		used with many different loaders. This option will use the GNU objcopy
+		program and should not be selected if you are not using the GNU
+		toolchain.
+
 config INTELHEX_BINARY
 	bool "Intel HEX binary format"
 	default n
