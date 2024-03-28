@@ -45,6 +45,10 @@
 #  include "stm32_rtc.h"
 #endif
 
+#ifdef CONFIG_STM32H7_FDCAN
+#include "stm32_fdcan_sock.h"
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -206,6 +210,28 @@ int stm32_bringup(void)
       syslog(LOG_ERR, "Failed to initialize EEPROM HX24LCXXB: %d\n", ret);
       return ret;
     }
+#endif
+
+#ifdef CONFIG_PWM
+  /* Initialize PWM and register the PWM device. */
+
+  ret = stm32_pwm_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_pwm_setup() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_NETDEV_LATEINIT
+
+#  ifdef CONFIG_STM32H7_FDCAN1
+  stm32_fdcansockinitialize(0);
+#  endif
+
+#  ifdef CONFIG_STM32H7_FDCAN2
+  stm32_fdcansockinitialize(1);
+#  endif
+
 #endif
 
   return OK;

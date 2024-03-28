@@ -396,6 +396,21 @@
 #define GPIO_I2C3_SCL (GPIO_I2C3_SCL_2 | GPIO_SPEED_100MHz) /* PH7 */
 #define GPIO_I2C3_SDA (GPIO_I2C3_SDA_2 | GPIO_SPEED_100MHz) /* PH8 */
 
+/* PWM - Buzzer */
+
+#define GPIO_TIM17_CH1OUT  (GPIO_TIM17_CH1NOUT_1) /* PB7 */
+#define GPIO_TIM4_CH2OUT   (GPIO_TIM4_CH2OUT_1)   /* PB7 */
+
+/* FDCAN1 */
+
+#define GPIO_CAN1_RX      (GPIO_CAN1_RX_3|GPIO_SPEED_50MHz)      /* PD0 */
+#define GPIO_CAN1_TX      (GPIO_CAN1_TX_3|GPIO_SPEED_50MHz)      /* PD1 */
+
+/* FDCAN2 */
+
+#define GPIO_CAN2_RX      (GPIO_CAN2_RX_2|GPIO_SPEED_50MHz)      /* PB5 - D11 */
+#define GPIO_CAN2_TX      (GPIO_CAN2_TX_2|GPIO_SPEED_50MHz)      /* PB6 - D1 */
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
