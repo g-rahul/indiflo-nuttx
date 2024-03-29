@@ -18,41 +18,41 @@
 #
 # ##############################################################################
 
-function(nuttx_generate_outputs target)
+function(nuttx_generate_outputs target config)
   if(CONFIG_INTELHEX_BINARY)
     add_custom_command(
-      OUTPUT ${target}.hex
-      COMMAND ${CMAKE_OBJCOPY} -O ihex ${target} ${target}.hex
+      OUTPUT ${config}.hex
+      COMMAND ${CMAKE_OBJCOPY} -O ihex ${target} ${config}.hex
       DEPENDS ${target})
-    add_custom_target(${target}-hex ALL DEPENDS ${target}.hex)
-    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.hex\n")
+    add_custom_target(${config}-hex ALL DEPENDS ${config}.hex)
+    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${config}.hex\n")
   endif()
 
   if(CONFIG_MOTOROLA_SREC)
     add_custom_command(
-      OUTPUT ${target}.srec
-      COMMAND ${CMAKE_OBJCOPY} -O srec ${target} ${target}.srec
+      OUTPUT ${config}.srec
+      COMMAND ${CMAKE_OBJCOPY} -O srec ${target} ${config}.srec
       DEPENDS ${target})
-    add_custom_target(${target}-srec ALL DEPENDS ${target}.srec)
-    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.srec\n")
+    add_custom_target(${config}-srec ALL DEPENDS ${config}.srec)
+    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${config}.srec\n")
   endif()
 
   if(CONFIG_RAW_BINARY)
     add_custom_command(
-      OUTPUT ${target}.bin
-      COMMAND ${CMAKE_OBJCOPY} -O binary ${target} ${target}.bin
+      OUTPUT ${config}.bin
+      COMMAND ${CMAKE_OBJCOPY} -O binary ${target} ${config}.bin
       DEPENDS ${target})
-    add_custom_target(${target}-bin ALL DEPENDS ${target}.bin)
-    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.bin\n")
+    add_custom_target(${config}-bin ALL DEPENDS ${config}.bin)
+    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${config}.bin\n")
   endif()
 
   if(CONFIG_ELF_32_L)
   add_custom_command(
-    OUTPUT ${target}.elf
-    COMMAND ${CMAKE_OBJCOPY} -O elf32-little ${target} ${target}.elf
+    OUTPUT ${config}.elf
+    COMMAND ${CMAKE_OBJCOPY} -O elf32-littlearm ${target} ${config}.elf
     DEPENDS ${target})
-  add_custom_target(${target}-elf ALL DEPENDS ${target}.elf)
-  file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.elf\n")
+  add_custom_target(${config}-elf ALL DEPENDS ${config}.elf)
+  file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${config}.elf\n")
   endif()
 
 endfunction(nuttx_generate_outputs)
