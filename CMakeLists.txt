@@ -606,7 +606,7 @@ if(NOT CONFIG_ARCH_SIM)
             ${nuttx_libs} ${nuttx_extra_libs} -Wl,--end-group)
 
   # generate binary outputs in different formats (.bin, .hex, etc)
-  nuttx_generate_outputs(nuttx)
+  nuttx_generate_outputs(nuttx ${NUTTX_CONFIG})
 
   if(CONFIG_UBOOT_UIMAGE)
     add_custom_command(
