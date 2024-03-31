@@ -1505,6 +1505,21 @@ config ARCH_BOARD_NUCLEO_144
 			NUCLEO-F767ZI - STM32F767ZIT6 a 216MHz Cortex-M7, w/DPFPU -
 				2048KiB Flash memory and 512KiB SRAM.
 
+config ARCH_BOARD_STM32F765_INDIFLO
+	bool "Indiflo F765 Boards"
+	depends on ARCH_CHIP_STM32F765II
+	select ARCH_HAVE_LEDS
+	---help---
+		Indiflo FMU Boards with STM32F765:
+
+			Target STM32    Order code
+			STM32F767ZIT6   DF000-V5
+
+		Supported in this configuration are:
+
+			DragonFLy-V5 - STM32F765IIT6 a 216MHz Cortex-M7, w/DPFPU -
+				2048KiB Flash memory and 512KiB SRAM.
+
 config ARCH_BOARD_NUCLEO_L073RZ
 	bool "STM32L073RZU6 Nucleo L073RZ"
 	depends on ARCH_CHIP_STM32L073RZ
@@ -3201,6 +3216,7 @@ config ARCH_BOARD
 	default "nrf9160-dk-nrf52"          if ARCH_BOARD_NRF9160_DK_NRF52
 	default "ntosd-dm320"               if ARCH_BOARD_NTOSD_DM320
 	default "nucleo-144"                if ARCH_BOARD_NUCLEO_144
+	default "stm32f765-indiflo"         if ARCH_BOARD_STM32F765_INDIFLO
 	default "nucleo-f072rb"             if ARCH_BOARD_NUCLEO_F072RB
 	default "nucleo-f091rc"             if ARCH_BOARD_NUCLEO_F091RC
 	default "nucleo-f103rb"             if ARCH_BOARD_NUCLEO_F103RB
@@ -3803,6 +3819,9 @@ source "boards/arm/stm32f0l0g0/stm32f072-discovery/Kconfig"
 endif
 if ARCH_BOARD_NUCLEO_144
 source "boards/arm/stm32f7/nucleo-144/Kconfig"
+endif
+if ARCH_BOARD_STM32F765_INDIFLO
+source "boards/arm/stm32f7/stm32f765-indiflo/Kconfig"
 endif
 if ARCH_BOARD_STM32F746_WS
 source "boards/arm/stm32f7/stm32f746-ws/Kconfig"
