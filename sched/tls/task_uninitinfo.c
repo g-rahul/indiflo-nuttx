@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/list.h>
@@ -48,8 +47,6 @@ static void task_uninit_stream(FAR struct task_group_s *group)
 {
   FAR struct streamlist *list;
   FAR struct file_struct *stream;
-  FAR sq_entry_t *curr;
-  FAR sq_entry_t *next;
 
   DEBUGASSERT(group && group->tg_info);
   list = &group->tg_info->ta_streamlist;
@@ -69,9 +66,11 @@ static void task_uninit_stream(FAR struct task_group_s *group)
 
   /* Release each stream in the list */
 
-  sq_for_every_safe(&list->sl_queue, curr, next)
+  list->sl_tail = NULL;
+  while (list->sl_head != NULL)
     {
-      stream = container_of(curr, struct file_struct, fs_entry);
+      stream = list->sl_head;
+      list->sl_head = stream->fs_next;
 
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
       /* Destroy the mutex that protects the IO buffer */
@@ -143,7 +142,5 @@ void task_uninit_info(FAR struct task_group_s *group)
 #endif /* CONFIG_FILE_STREAM */
 
   nxmutex_destroy(&info->ta_lock);
-#ifdef CONFIG_MM_KERNEL_HEAP
   group_free(group, info);
-#endif
 }

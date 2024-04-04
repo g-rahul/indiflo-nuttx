@@ -110,15 +110,6 @@ SECTIONS
         PROVIDE(_end_data_ = . );
     }
 
-    /* data in ram but no need to clean in .s*/
-
-    .noinit (NOLOAD) :
-    {
-        . = ALIGN(4);
-        *(.noinit)
-        *(.noinit.*)
-    }
-
     .bss :
     {
         . = ALIGN(4);
@@ -129,6 +120,14 @@ SECTIONS
         *(.bss.*)
     }
 
+    /* data in ram but no need to clean in .s*/
+
+    .noinit (NOLOAD) :
+    {
+        . = ALIGN(4);
+        *(.noinit)
+        *(.noinit.*)
+    }
     . = ALIGN(4);
 
     PROVIDE(_ebss = .);

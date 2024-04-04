@@ -205,9 +205,9 @@ int nrf53_bringup(void)
 
 #ifdef CONFIG_RPTUN
 #ifdef CONFIG_NRF53_APPCORE
-  nrf53_rptun_init("appcore");
+  nrf53_rptun_init("nrf53-shmem", "appcore");
 #else
-  nrf53_rptun_init("netcore");
+  nrf53_rptun_init("nrf53-shmem", "netcore");
 #endif
 #endif
 

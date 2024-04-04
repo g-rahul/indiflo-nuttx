@@ -124,15 +124,6 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > data AT > locked
 
-    /* Uninitialized data */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-    } > data
-
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -141,6 +132,15 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _ebss = ABSOLUTE(.);
+    } > data
+
+    /* Uninitialized data */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
     } > data
 
     /* Stabs debugging sections. */

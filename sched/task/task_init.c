@@ -111,18 +111,12 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Create a new task group */
 
-  ret = group_initialize(tcb, tcb->cmn.flags);
+  ret = group_allocate(tcb, tcb->cmn.flags);
   if (ret < 0)
     {
       sched_trace_end();
       return ret;
     }
-
-#ifndef CONFIG_DISABLE_PTHREAD
-  /* Initialize the task join */
-
-  nxtask_joininit(&tcb->cmn);
-#endif
 
   /* Duplicate the parent tasks environment */
 
@@ -185,7 +179,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Now we have enough in place that we can join the group */
 
-  group_postinitialize(tcb);
+  group_initialize(tcb);
   sched_trace_end();
   return ret;
 
@@ -209,8 +203,6 @@ errout_with_group:
           up_release_stack(&tcb->cmn, ttype);
         }
     }
-
-  nxtask_joindestroy(&tcb->cmn);
 
   group_leave(&tcb->cmn);
 
@@ -243,7 +235,7 @@ void nxtask_uninit(FAR struct task_tcb_s *tcb)
    * nxtask_setup_scheduler().
    */
 
-  dq_rem((FAR dq_entry_t *)tcb, list_inactivetasks());
+  dq_rem((FAR dq_entry_t *)tcb, &g_inactivetasks);
 
   /* Release all resources associated with the TCB... Including the TCB
    * itself.

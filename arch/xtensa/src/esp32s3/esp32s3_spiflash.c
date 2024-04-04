@@ -36,7 +36,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
 #include <nuttx/kthread.h>
-#include <nuttx/signal.h>
 
 #include "sched/sched.h"
 
@@ -99,7 +98,6 @@
 
 /* SPI flash hardware definition */
 
-#  define FLASH_PAGE_SIZE           (256)
 #  define FLASH_SECTOR_SIZE         (4096)
 
 /* SPI flash command */
@@ -285,26 +283,22 @@ static void spiflash_resume_cache(void)
 static void spiflash_start(void)
 {
   struct tcb_s *tcb = this_task();
+  int cpu = up_cpu_index();
   int saved_priority = tcb->sched_priority;
-  int cpu;
 #ifdef CONFIG_SMP
-  int other_cpu;
+  int other_cpu = cpu ? 0 : 1;
 #endif
 
   nxrmutex_lock(&g_flash_op_mutex);
+
+  DEBUGASSERT(cpu == 0 || cpu == 1);
 
   /* Temporary raise schedule priority */
 
   nxsched_set_priority(tcb, SCHED_PRIORITY_MAX);
 
-  cpu = up_cpu_index();
 #ifdef CONFIG_SMP
-  other_cpu = cpu == 1 ? 0 : 1;
-#endif
 
-  DEBUGASSERT(cpu == 0 || cpu == 1);
-
-#ifdef CONFIG_SMP
   DEBUGASSERT(other_cpu == 0 || other_cpu == 1);
   DEBUGASSERT(other_cpu != cpu);
   if (OSINIT_OS_READY())
@@ -736,28 +730,6 @@ static void IRAM_ATTR spiflash_flushmapped(size_t start, size_t size)
         }
     }
 }
-
-/****************************************************************************
- * Name: spiflash_os_yield
- *
- * Description:
- *   Yield to other tasks, called during erase operations.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static inline void IRAM_ATTR spiflash_os_yield(void)
-{
-  /* Delay 1 tick */
-
-  useconds_t us = TICK2USEC(1);
-  nxsig_usleep(us);
-}
 #endif /* CONFIG_ESP32S3_SPI_FLASH_DONT_USE_ROM_CODE */
 
 /****************************************************************************
@@ -1133,25 +1105,19 @@ int spi_flash_erase_range(uint32_t start_address, uint32_t size)
   int ret = OK;
   uint32_t addr = start_address;
 
+  spiflash_start();
+
   for (uint32_t i = 0; i < size; i += FLASH_SECTOR_SIZE)
     {
-      if (i > 0)
-        {
-          spiflash_os_yield();
-        }
-
-      spiflash_start();
       wait_flash_idle();
       enable_flash_write();
 
       ERASE_FLASH_SECTOR(addr);
       addr += FLASH_SECTOR_SIZE;
-      wait_flash_idle();
-      disable_flash_write();
-      spiflash_end();
     }
 
-  spiflash_start();
+  wait_flash_idle();
+  disable_flash_write();
   spiflash_flushmapped(start_address, FLASH_SECTOR_SIZE * size);
   spiflash_end();
 
@@ -1186,11 +1152,10 @@ int spi_flash_write(uint32_t dest_addr, const void *buffer, uint32_t size)
 
   spiflash_start();
 
-  while (tx_bytes)
+  for (int i = 0; i < size; i += SPI_BUFFER_BYTES)
     {
       uint32_t spi_buffer[SPI_BUFFER_WORDS];
-      uint32_t n = FLASH_PAGE_SIZE - tx_addr % FLASH_PAGE_SIZE;
-      n = MIN(n, MIN(tx_bytes, SPI_BUFFER_BYTES));
+      uint32_t n = MIN(tx_bytes, SPI_BUFFER_BYTES);
 
 #ifdef CONFIG_ESP32S3_SPIRAM
 

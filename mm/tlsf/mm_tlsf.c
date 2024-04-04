@@ -189,11 +189,11 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
   flags = up_irq_save();
 
-  tmp->flink = heap->mm_delaylist[this_cpu()];
-  heap->mm_delaylist[this_cpu()] = tmp;
+  tmp->flink = heap->mm_delaylist[up_cpu_index()];
+  heap->mm_delaylist[up_cpu_index()] = tmp;
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  heap->mm_delaycount[this_cpu()]++;
+  heap->mm_delaycount[up_cpu_index()]++;
 #endif
 
   up_irq_restore(flags);
@@ -215,21 +215,21 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   flags = up_irq_save();
 
-  tmp = heap->mm_delaylist[this_cpu()];
+  tmp = heap->mm_delaylist[up_cpu_index()];
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   if (tmp == NULL ||
       (!force &&
-        heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+        heap->mm_delaycount[up_cpu_index()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
       up_irq_restore(flags);
       return false;
     }
 
-  heap->mm_delaycount[this_cpu()] = 0;
+  heap->mm_delaycount[up_cpu_index()] = 0;
 #endif
 
-  heap->mm_delaylist[this_cpu()] = NULL;
+  heap->mm_delaylist[up_cpu_index()] = NULL;
 
   up_irq_restore(flags);
 
@@ -503,7 +503,7 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
   if (mm_lock(heap) == 0)
     {
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(mem, MM_FREE_MAGIC, mm_malloc_size(heap, mem));
+      memset(mem, 0x55, mm_malloc_size(heap, mem));
 #endif
 
       kasan_poison(mem, mm_malloc_size(heap, mem));
@@ -573,12 +573,6 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
 #else
 #  define idx 0
-#endif
-
-#ifdef CONFIG_MM_FILL_ALLOCATIONS
-  /* Use the fill value to mark uninitialized user memory */
-
-  memset(heapstart, 0xcc, heapsize);
 #endif
 
   /* Register to KASan for access check */
@@ -1150,7 +1144,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       kasan_unpoison(ret, mm_malloc_size(heap, ret));
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(ret, 0xaa, nodesize);
+      memset(ret, 0xaa, mm_malloc_size(heap, ret));
 #endif
     }
 

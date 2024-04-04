@@ -237,10 +237,10 @@ support.
 
 For details see :doc:`/components/wireless`.
 
-``nuttx/CMakeLists.txt``
-========================
+``nuttx/CMakeList.txt``
+=======================
 
-The top-level ``CMakeLists.txt`` file.
+The top-level ``CMakeList.txt`` file.
 
 ``nuttx/Makefile``
 ==================

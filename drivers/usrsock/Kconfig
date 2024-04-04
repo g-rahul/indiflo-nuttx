@@ -39,7 +39,7 @@ endif # NET_USRSOCK
 config NET_USRSOCK_RPMSG_SERVER
 	bool "RPMSG usrsock"
 	default n
-	depends on NET && RPMSG
+	depends on NET && RPTUN
 	---help---
 		Enable usrsock through RPMSG channel.
 

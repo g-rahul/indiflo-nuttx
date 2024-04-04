@@ -88,7 +88,7 @@ enum local_state_s
  * connection structures:
  *
  * 1. Server.  A SOCK_STREAM that only listens for and accepts
- *    connections from client.
+ *    connections from server.
  * 2. Client.  A SOCK_STREAM peer that connects via the server.
  * 3. Peer. A connected SOCK_STREAM that sends() and recvs() packets.
  *    May either be the client that connect with the server of the
@@ -98,7 +98,8 @@ enum local_state_s
  * And
  *
  * 4. Connectionless.  Like a peer but using a connectionless datagram
- *    style of communication.
+ *    style of communication.  SOCK_DRAM support has not yet been
+ *    implemented.
  */
 
 struct devif_callback_s;       /* Forward reference */
@@ -142,6 +143,7 @@ struct local_conn_s
   /* SOCK_STREAM fields common to both client and server */
 
   sem_t lc_waitsem;            /* Use to wait for a connection to be accepted */
+  FAR struct socket *lc_psock; /* A reference to the socket structure */
 
   /* The following is a list if poll structures of threads waiting for
    * socket events.

@@ -26,7 +26,6 @@
 
 #include <arch/arch.h>
 #include <arch/irq.h>
-#include <arch/mode.h>
 
 #include "chip.h"
 #include "riscv_internal.h"
@@ -34,35 +33,18 @@
 /****************************************************************************
  * Public Symbols
  ****************************************************************************/
-  /* Imported symbols */
-
-  .extern __trap_vec
 
   /* Exported Symbols */
 
   .section .text
-
-#ifdef CONFIG_NUTTSBI
-
-  .global __start_s
-
-__start_s:
-
-#else
-
   .global __start
 
 __start:
 
-#endif
-
-  /* Preserve a1 by not using it here as it contains DTB */
-
-#ifndef CONFIG_BUILD_KERNEL
+  /* Preserve a1 as it contains the pointer to DTB */
   /* Load mhartid (cpuid) */
 
   csrr a0, mhartid
-#endif
 
   /* Set stack pointer to the idle thread stack */
 
@@ -82,7 +64,7 @@ __start:
   /* If a0 (mhartid) >= t1 (the number of CPUs), stop here */
 
   blt  a0, t1, 3f
-  csrw CSR_IE, zero
+  csrw mie, zero
   wfi
 
 3:
@@ -92,7 +74,11 @@ __start:
 
   /* Offset = pointer width * hart id */
 
+#ifdef CONFIG_ARCH_RV32
+  slli t1, a0, 2
+#else
   slli t1, a0, 3
+#endif
   add  t0, t0, t1
 
   /* Load idle stack base to sp */
@@ -111,14 +97,14 @@ __start:
 
 2:
 
-  /* Disable all interrupts (i.e. timer, external) */
+  /* Disable all interrupts (i.e. timer, external) in mie */
 
-	csrw	CSR_IE, zero
-  
-  la   t0, __trap_vec        /* __trap_dump */
-  csrw CSR_TVEC, t0
-  
-  /* Jump to k230_start, a0=mhartid, a1=dtb */
+	csrw	mie, zero
+
+  la   t0, __trap_vec
+  csrw mtvec, t0
+
+  /* Jump to k230_start */
 
   jal  x1, k230_start
 

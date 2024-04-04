@@ -35,8 +35,6 @@
 
 	.thumb
 	.syntax unified
-	.text
-	.section .text.memset
 	.global memset
 	.type	memset, %function
 memset:

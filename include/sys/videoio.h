@@ -28,9 +28,9 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/video_controls.h>
 
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/video/video_controls.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -518,8 +518,6 @@ enum v4l2_buf_type
    || (type) == V4L2_BUF_TYPE_SDR_OUTPUT           \
    || (type) == V4L2_BUF_TYPE_META_OUTPUT)
 
-#define V4L2_TYPE_IS_CAPTURE(type) (!V4L2_TYPE_IS_OUTPUT(type))
-
 /* Memory I/O method. Currently, support only V4L2_MEMORY_USERPTR. */
 
 enum v4l2_memory
@@ -989,16 +987,6 @@ struct v4l2_captureparm
   uint32_t           readbuffers;   /*  # of buffers for read */
 };
 
-struct v4l2_outputparm
-{
-  uint32_t          capability;      /*  Supported modes */
-  uint32_t          outputmode;      /*  Current mode */
-  struct v4l2_fract timeperframe;    /*  Time per frame in seconds */
-  uint32_t          extendedmode;    /*  Driver-specific extensions */
-  uint32_t          writebuffers;    /*  # of buffers for write */
-  uint32_t          reserved[4];
-};
-
 struct v4l2_cropcap
 {
   uint32_t                type; /* enum v4l2_buf_type */
@@ -1025,9 +1013,7 @@ struct v4l2_streamparm
   union
   {
     struct v4l2_captureparm capture;
-    struct v4l2_outputparm  output;
   } parm;
-  uint8_t  raw_data[200];            /* user-defined */
 };
 
 /* E V E N T S */
@@ -1155,7 +1141,7 @@ enum v4l2_ctrl_type
 
 struct v4l2_queryctrl
 {
-  uint16_t   ctrl_class;               /* Control class(not used) */
+  uint16_t   ctrl_class;               /* Control class */
   uint16_t   id;                       /* Control id */
   uint16_t   type;                     /* enum #v4l2_ctrl_type */
   char       name[32];                 /* Name of control */
@@ -1167,7 +1153,7 @@ struct v4l2_queryctrl
 
 struct v4l2_query_ext_ctrl
 {
-  uint16_t   ctrl_class;               /* Control class(not used) */
+  uint16_t   ctrl_class;               /* Control class */
   uint16_t   id;                       /* Control id */
   uint16_t   type;                     /* enum #v4l2_ctrl_type */
   char       name[32];                 /* Name of control */
@@ -1184,7 +1170,7 @@ struct v4l2_query_ext_ctrl
 
 struct v4l2_querymenu
 {
-  uint16_t   ctrl_class;    /* Camera control class(not used) */
+  uint16_t   ctrl_class;    /* Camera control class */
   uint16_t   id;            /* Camera control id    */
   uint32_t   index;         /* Index of menu.       */
   union

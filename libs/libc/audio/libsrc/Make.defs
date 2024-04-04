@@ -20,21 +20,19 @@
 
 ifeq ($(CONFIG_AUDIO_SRC),y)
 
-PACKAGE = libsamplerate
-VERSION = 0.2.2
-
-SRCPATH = audio/libsrc
+PACKAGE=libsamplerate
+VERSION=0.2.2
 
 # Download and unpack tarball if no git repo found
-$(SRCPATH)/libsamplerate:
-ifeq ($(wildcard $(SRCPATH)/libsamplerate/.git),)
-	$(call DOWNLOAD,https://codeload.github.com/libsndfile/libsamplerate/zip,master,$(SRCPATH)/libsamplerate.zip)
-	$(Q) unzip -o $(SRCPATH)/libsamplerate.zip -d $(SRCPATH)
-	$(Q) mv $(SRCPATH)/libsamplerate-master $(SRCPATH)/libsamplerate
+ifeq ($(wildcard libsamplerate/.git),)
+libsamplerate:
+	$(call DOWNLOAD,https://codeload.github.com/libsndfile/libsamplerate/zip,master,libsamplerate.zip)
+	$(Q) unzip -o libsamplerate.zip
+	$(Q) mv libsamplerate-master libsamplerate
 endif
 
-$(TOPDIR)/include/nuttx/audio/samplerate.h : $(SRCPATH)/libsamplerate
-	$(Q) cp -rf $(SRCPATH)/libsamplerate/include/samplerate.h $(TOPDIR)$(DELIM)include$(DELIM)nuttx$(DELIM)audio$(DELIM)
+$(TOPDIR)/include/nuttx/audio/samplerate.h : libsamplerate
+	$(Q) cp -rf libsamplerate/include/samplerate.h $(TOPDIR)$(DELIM)include$(DELIM)nuttx$(DELIM)audio$(DELIM)
 
 context:: $(TOPDIR)/include/nuttx/audio/samplerate.h
 
@@ -47,7 +45,7 @@ CFLAGS += -DPACKAGE=\"$(PACKAGE)\" -DVERSION=\"$(VERSION)\"
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)include$(DELIM)nuttx$(DELIM)audio
 
-CFLAGS += -DCPU_CLIPS_NEGATIVE=0 -DCPU_CLIPS_POSITIVE=0
+CFLAGS += -DCPU_CLIPS_NEGATIVE=0
 
 ifeq ($(CONFIG_SINC_FAST_CONVERTER),y)
 CFLAGS += -DENABLE_SINC_FAST_CONVERTER
@@ -61,15 +59,15 @@ ifeq ($(CONFIG_SINC_BEST_CONVERTER),y)
 CFLAGS += -DENABLE_SINC_BEST_CONVERTER
 endif
 
-VPATH += $(SRCPATH)/libsamplerate/src
-SUBDIRS += $(SRCPATH)/libsamplerate/src
-DEPPATH += --dep-path $(SRCPATH)/libsamplerate/src
+VPATH += libsamplerate/src
+SUBDIRS += libsamplerate/src
+DEPPATH += --dep-path libsamplerate/src
 
 distclean::
 	$(call DELDIR, $(TOPDIR)$(DELIM)include$(DELIM)nuttx$(DELIM)audio$(DELIM)samplerate.h)
-ifeq ($(wildcard $(SRCPATH)/libsamplerate/.git),)
-	$(call DELDIR, $(SRCPATH)/libsamplerate)
-	$(call DELFILE, $(SRCPATH)/libsamplerate.zip)
+ifeq ($(wildcard libsamplerate/.git),)
+	$(call DELDIR, libsamplerate)
+	$(call DELFILE, libsamplerate.zip)
 endif
 
 endif

@@ -107,19 +107,14 @@ void sbi_start(void)
   WRITE_CSR(mcounteren, UINT32_C(~0));
   WRITE_CSR(scounteren, UINT32_C(~0));
 
-#ifdef CONFIG_NUTTSBI_LATE_INIT
-  /* Do device specific initialization as needed */
-
-  sbi_late_initialize();
-#endif
-
   /* Set program counter to __start_s */
 
   WRITE_CSR(mepc, __start_s);
 
   /* Open everything for PMP */
 
-  riscv_append_pmp_region(PMPCFG_A_NAPOT | PMPCFG_RWX_MASK, 0, -1);
+  WRITE_CSR(pmpaddr0, -1);
+  WRITE_CSR(pmpcfg0, (PMPCFG_A_NAPOT | PMPCFG_R | PMPCFG_W | PMPCFG_X));
 
   /* Then jump to the S-mode start function */
 

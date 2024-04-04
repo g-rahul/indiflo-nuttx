@@ -229,7 +229,6 @@ begin_packed_struct struct cmd_notify_pos_s
   int32_t  lat32;
   int32_t  lon32;
   int32_t  alt32;
-  int16_t  geo16;
 } end_packed_struct;
 
 begin_packed_struct struct cmd_notify_vel_s
@@ -495,7 +494,6 @@ static int cxd5610_gnss_notify_pos(struct cxd5610_gnss_dev_s *priv, int len)
   int32_t lat32;
   int32_t lon32;
   int32_t alt32;
-  int16_t geo16 = 0;
 
   /* If the packet is invalid, do not update received data */
 
@@ -513,15 +511,10 @@ static int cxd5610_gnss_notify_pos(struct cxd5610_gnss_dev_s *priv, int len)
   cxd5610_store32(&lat32, &param->lat32);
   cxd5610_store32(&lon32, &param->lon32);
   cxd5610_store32(&alt32, &param->alt32);
-  if (GET_PACKET_VERSION(param->ver8) > 0)
-    {
-      cxd5610_store16(&geo16, &param->geo16);
-    }
-
   receiver->latitude  = (double)lat32 / 10000000.0;
   receiver->longitude = (double)lon32 / 10000000.0;
   receiver->altitude  = (double)alt32 / 100.0;
-  receiver->geoid = (double)geo16 / 100.0;
+  receiver->geoid = 0.0;
   receiver->svtype = (param->mode >> 4);
   receiver->fix_indicator = (param->mode & 0xf);
 
@@ -530,12 +523,10 @@ static int cxd5610_gnss_notify_pos(struct cxd5610_gnss_dev_s *priv, int len)
       receiver->pos_dataexist = 1;
     }
 
-  sninfo("lat=%.7lf[deg] lon=%.7lf[deg] alt=%.2lf[m] "
-         "geo=%.2lf[m] svtype=%d fix=%d\n",
+  sninfo("lat=%.7lf[deg] lon=%.7lf[deg] alt=%.2lf[m] svtype=%d fix=%d\n",
          receiver->latitude,
          receiver->longitude,
          receiver->altitude,
-         receiver->geoid,
          receiver->svtype,
          receiver->fix_indicator);
 
@@ -1546,7 +1537,7 @@ static int cxd5610_gnss_initialize(struct cxd5610_gnss_dev_s *priv)
 
   /* Create thread for receiving from CXD5610 device */
 
-  snprintf(arg1, 16, "%p", priv);
+  snprintf(arg1, 16, "0x%" PRIxPTR, (uintptr_t)priv);
   argv[0] = arg1;
   argv[1] = NULL;
 

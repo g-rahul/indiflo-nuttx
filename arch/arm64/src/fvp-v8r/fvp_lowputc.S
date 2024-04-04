@@ -26,6 +26,7 @@
 #include <nuttx/config.h>
 
 #include "arm64_macro.inc"
+#include "serial_pl011.h"
 
 /****************************************************************************
  * Public Symbols

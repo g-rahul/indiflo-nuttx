@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/power/consumer.h>

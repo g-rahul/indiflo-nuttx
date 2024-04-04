@@ -51,7 +51,6 @@ $(BOOTLOADER_CONFIG): $(TOPDIR)/.config $(BOOTLOADER_DIR)
 		$(if $(CONFIG_ESP32S3_FLASH_4M),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHSIZE_4MB)) \
 		$(if $(CONFIG_ESP32S3_FLASH_8M),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHSIZE_8MB)) \
 		$(if $(CONFIG_ESP32S3_FLASH_16M),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHSIZE_16MB)) \
-		$(if $(CONFIG_ESP32S3_FLASH_32M),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHSIZE_32MB)) \
 		$(if $(CONFIG_ESP32S3_FLASH_MODE_DIO),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHMODE_DIO)) \
 		$(if $(CONFIG_ESP32S3_FLASH_MODE_DOUT),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHMODE_DOUT)) \
 		$(if $(CONFIG_ESP32S3_FLASH_MODE_QIO),$(call cfg_en,CONFIG_ESPTOOLPY_FLASHMODE_QIO)) \
@@ -132,6 +131,16 @@ else ifeq ($(CONFIG_ESP32S3_BOOTLOADER_DOWNLOAD_PREBUILT),y)
 BOOTLOADER_VERSION = latest
 BOOTLOADER_URL     = https://github.com/espressif/esp-nuttx-bootloader/releases/download/$(BOOTLOADER_VERSION)
 
+ifeq ($(CONFIG_ESP32S3_APP_FORMAT_MCUBOOT),y)
+
+bootloader:
+	$(call DOWNLOAD,$(BOOTLOADER_URL),mcuboot-esp32s3.bin,$(TOPDIR)/mcuboot-esp32s3.bin)
+
+clean_bootloader:
+	$(call DELFILE,$(TOPDIR)/mcuboot-esp32s3.bin)
+
+else ifeq ($(CONFIG_ESP32S3_APP_FORMAT_LEGACY),y)
+
 bootloader:
 	$(call DOWNLOAD,$(BOOTLOADER_URL),bootloader-esp32s3.bin,$(TOPDIR)/bootloader-esp32s3.bin)
 	$(call DOWNLOAD,$(BOOTLOADER_URL),partition-table-esp32s3.bin,$(TOPDIR)/partition-table-esp32s3.bin)
@@ -139,5 +148,7 @@ bootloader:
 clean_bootloader:
 	$(call DELFILE,$(TOPDIR)/bootloader-esp32s3.bin)
 	$(call DELFILE,$(TOPDIR)/partition-table-esp32s3.bin)
+
+endif
 
 endif

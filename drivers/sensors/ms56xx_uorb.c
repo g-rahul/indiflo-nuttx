@@ -366,7 +366,7 @@ static inline void baro_measure_read(FAR struct ms56xx_dev_s *priv,
  *              read.
  *
  * Parameter:
- *   argc - Number of arguments
+ *   argc - Number opf arguments
  *   argv - Pointer to argument list
  ****************************************************************************/
 

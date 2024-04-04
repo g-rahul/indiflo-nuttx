@@ -124,7 +124,7 @@
 #define REG_X3_NDX          3
 #define REG_X4_NDX          4
 
-/* $5-$7 = t0-t2: Temporary registers */
+/* $5-$7 = t0-t3: Temporary registers */
 
 #define REG_X5_NDX          5
 #define REG_X6_NDX          6
@@ -134,7 +134,7 @@
 
 #define REG_X8_NDX          8
 
-/* $9 s1 Saved register */
+/* $89 s1 Saved register */
 
 #define REG_X9_NDX          9
 
@@ -620,7 +620,7 @@ extern "C"
 #endif
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
+ * register storage structure.  If is non-NULL only during interrupt
  * processing.  Access to g_current_regs[] must be through the macro
  * CURRENT_REGS for portability.
  */

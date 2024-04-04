@@ -51,9 +51,7 @@ endif()
 if(NOT CONFIG_BUILD_FLAT)
   list(APPEND SRCS riscv_task_start.c riscv_pthread_start.c
        riscv_signal_dispatch.c)
-  if(CONFIG_BUILD_PROTECTED)
-    target_sources(arch_interface PRIVATE riscv_signal_handler.S)
-  endif()
+  list(APPEND SRCS riscv_signal_handler.S)
 endif()
 
 if(CONFIG_SCHED_BACKTRACE)
@@ -93,17 +91,12 @@ if(CONFIG_ARCH_USE_MMU)
 endif()
 
 if(CONFIG_ARCH_KERNEL_STACK)
-  list(APPEND SRCS riscv_addrenv_kstack.c riscv_ksp.c)
+  list(APPEND SRCS riscv_addrenv_kstack.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS riscv_addrenv.c riscv_pgalloc.c riscv_addrenv_perms.c)
   list(APPEND SRCS riscv_addrenv_utils.c riscv_addrenv_shm.c)
-endif()
-
-if(CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS riscv_percpu.c)
-  add_subdirectory(supervisor)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

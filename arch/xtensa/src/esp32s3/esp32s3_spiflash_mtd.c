@@ -39,11 +39,9 @@
 #include <nuttx/mtd/mtd.h>
 
 #include "hardware/esp32s3_soc.h"
-#include "hardware/esp32s3_cache_memory.h"
 
 #include "xtensa_attr.h"
 #include "esp32s3_spiflash.h"
-#include "esp32s3_spiram.h"
 
 #include "rom/esp32s3_spiflash.h"
 #include "esp32s3_spiflash_mtd.h"
@@ -61,9 +59,6 @@
 #define MTD_BLK2SIZE(_priv, _b)     (MTD_BLK_SIZE * (_b))
 #define MTD_SIZE2BLK(_priv, _s)     ((_s) / MTD_BLK_SIZE)
 
-#define SPI_FLASH_ENCRYPT_UNIT_SIZE (64)
-#define SPI_FLASH_ENCRYPT_MIN_SIZE  (16)
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -76,7 +71,6 @@ enum spiflash_op_code_e
   SPIFLASH_OP_CODE_WRITE = 0,
   SPIFLASH_OP_CODE_READ,
   SPIFLASH_OP_CODE_ERASE,
-  SPIFLASH_OP_CODE_SET_BANK,
   SPIFLASH_OP_CODE_ENCRYPT_READ,
   SPIFLASH_OP_CODE_ENCRYPT_WRITE
 };
@@ -105,7 +99,6 @@ struct spiflash_work_arg
     uint32_t addr;
     uint8_t *buffer;
     uint32_t size;
-    uint32_t paddr;
   } op_arg;
 
   volatile int ret;
@@ -138,10 +131,6 @@ static ssize_t esp32s3_write(struct mtd_dev_s *dev, off_t offset,
                              size_t nbytes, const uint8_t *buffer);
 static ssize_t esp32s3_bwrite(struct mtd_dev_s *dev, off_t startblock,
                               size_t nblocks, const uint8_t *buffer);
-static int esp32s3_writedata_encrypt(struct mtd_dev_s *dev, off_t offset,
-                                     uint32_t size, const uint8_t *buffer);
-static ssize_t esp32s3_write_encrypt(struct mtd_dev_s *dev, off_t offset,
-                                     size_t nbytes, const uint8_t *buffer);
 static ssize_t esp32s3_bwrite_encrypt(struct mtd_dev_s *dev,
                                       off_t startblock,
                                       size_t nblocks,
@@ -155,8 +144,7 @@ static void esp32s3_spiflash_work(void *arg);
 static int esp32s3_async_op(enum spiflash_op_code_e opcode,
                             uint32_t addr,
                             const uint8_t *buffer,
-                            uint32_t size,
-                            uint32_t paddr);
+                            uint32_t size);
 #endif
 
 /****************************************************************************
@@ -191,7 +179,7 @@ static const struct esp32s3_mtd_dev_s g_esp32s3_spiflash_encrypt =
             .read   = esp32s3_read_decrypt,
             .ioctl  = esp32s3_ioctl,
 #ifdef CONFIG_MTD_BYTE_WRITE
-            .write  = esp32s3_write_encrypt,
+            .write  = NULL,
 #endif
             .name   = "esp32s3_spiflash_encrypt"
           },
@@ -271,12 +259,6 @@ static void esp32s3_spiflash_work(void *arg)
       work_arg->ret = spi_flash_erase_range(work_arg->op_arg.addr,
                                             work_arg->op_arg.size);
     }
-  else if (work_arg->op_code == SPIFLASH_OP_CODE_SET_BANK)
-    {
-      work_arg->ret = cache_dbus_mmu_map(work_arg->op_arg.addr,
-                                         work_arg->op_arg.paddr,
-                                         work_arg->op_arg.size);
-    }
   else if (work_arg->op_code == SPIFLASH_OP_CODE_ENCRYPT_READ)
     {
       work_arg->ret = spi_flash_read_encrypted(work_arg->op_arg.addr,
@@ -318,8 +300,7 @@ static void esp32s3_spiflash_work(void *arg)
 static int esp32s3_async_op(enum spiflash_op_code_e opcode,
                             uint32_t addr,
                             const uint8_t *buffer,
-                            uint32_t size,
-                            uint32_t paddr)
+                            uint32_t size)
 {
   int ret;
   struct spiflash_work_arg work_arg =
@@ -330,7 +311,6 @@ static int esp32s3_async_op(enum spiflash_op_code_e opcode,
       .addr = addr,
       .buffer = (uint8_t *)buffer,
       .size = size,
-      .paddr = paddr,
     },
     .sem = NXSEM_INITIALIZER(0, 0)
   };
@@ -376,7 +356,7 @@ static int esp32s3_erase(struct mtd_dev_s *dev, off_t startblock,
     }
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu)\n", __func__, dev, startblock, nblocks);
+  finfo("%s(%p, 0x%x, %d)\n", __func__, dev, startblock, nblocks);
 
   finfo("spi_flash_erase_range(0x%x, %d)\n", offset, nbytes);
 #endif
@@ -390,8 +370,7 @@ static int esp32s3_erase(struct mtd_dev_s *dev, off_t startblock,
 #ifdef CONFIG_ESP32S3_SPI_FLASH_SUPPORT_PSRAM_STACK
   if (stack_is_psram())
     {
-      ret = esp32s3_async_op(SPIFLASH_OP_CODE_ERASE, offset, NULL,
-                             nbytes, 0);
+      ret = esp32s3_async_op(SPIFLASH_OP_CODE_ERASE, offset, NULL, nbytes);
     }
   else
 #endif
@@ -442,10 +421,9 @@ static ssize_t esp32s3_read(struct mtd_dev_s *dev, off_t offset,
   ssize_t ret;
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n",
-        __func__, dev, offset, nbytes, buffer);
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, offset, nbytes, buffer);
 
-  finfo("spi_flash_read(0x%" PRIxOFF ", %p, %zu)\n", offset, buffer, nbytes);
+  finfo("spi_flash_read(0x%x, %p, %d)\n", offset, buffer, nbytes);
 #endif
 
   /* Acquire the mutex. */
@@ -460,7 +438,7 @@ static ssize_t esp32s3_read(struct mtd_dev_s *dev, off_t offset,
   if (stack_is_psram())
     {
       ret = esp32s3_async_op(SPIFLASH_OP_CODE_READ, offset,
-                             buffer, nbytes, 0);
+                             buffer, nbytes);
     }
   else
 #endif
@@ -506,8 +484,8 @@ static ssize_t esp32s3_bread(struct mtd_dev_s *dev, off_t startblock,
   uint32_t size = nblocks * MTD_BLK_SIZE;
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n",
-        __func__, dev, startblock, nblocks, buffer);
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock, nblocks,
+        buffer);
 #endif
 
   ret = esp32s3_read(dev, addr, size, buffer);
@@ -549,11 +527,9 @@ static ssize_t esp32s3_read_decrypt(struct mtd_dev_s *dev,
   ssize_t ret;
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n",
-        __func__, dev, offset, nbytes, buffer);
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, offset, nbytes, buffer);
 
-  finfo("spi_flash_read_encrypted(0x%" PRIxOFF ", %p, %zu)\n",
-        offset, buffer, nbytes);
+  finfo("spi_flash_read_encrypted(0x%x, %p, %d)\n", offset, buffer, nbytes);
 #endif
 
   /* Acquire the mutex. */
@@ -568,7 +544,7 @@ static ssize_t esp32s3_read_decrypt(struct mtd_dev_s *dev,
   if (stack_is_psram())
     {
       ret = esp32s3_async_op(SPIFLASH_OP_CODE_ENCRYPT_READ, offset,
-                             buffer, nbytes, 0);
+                             buffer, nbytes);
     }
   else
 #endif
@@ -616,8 +592,8 @@ static ssize_t esp32s3_bread_decrypt(struct mtd_dev_s *dev,
   uint32_t size = nblocks * MTD_BLK_SIZE;
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n",
-        __func__, dev, startblock, nblocks, buffer);
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock, nblocks,
+        buffer);
 #endif
 
   ret = esp32s3_read_decrypt(dev, addr, size, buffer);
@@ -629,144 +605,6 @@ static ssize_t esp32s3_bread_decrypt(struct mtd_dev_s *dev,
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
   finfo("%s()=%d\n", __func__, ret);
 #endif
-  return ret;
-}
-
-/****************************************************************************
- * Name: esp32s3_writedata_encrypt
- *
- * Description:
- *   Write plaintext data to SPI Flash at designated address by SPI Flash
- *   hardware encryption, and written data in SPI Flash is ciphertext.
- *
- * Input Parameters:
- *   dev    - MTD device data
- *   offset - target address offset, must be 32Bytes-aligned
- *   size   - data number, must be 32Bytes-aligned
- *   buffer - data buffer pointer
- *
- * Returned Value:
- *   0 if success or a negative value if fail.
- *
- ****************************************************************************/
-
-static int esp32s3_writedata_encrypt(struct mtd_dev_s *dev, off_t offset,
-                                     uint32_t size, const uint8_t *buffer)
-{
-  ssize_t ret;
-
-#ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n", __func__, dev, offset,
-        size, buffer);
-#endif
-
-  DEBUGASSERT((offset % SPI_FLASH_ENCRYPT_MIN_SIZE) == 0);
-  DEBUGASSERT((size % SPI_FLASH_ENCRYPT_MIN_SIZE) == 0);
-  ret = nxmutex_lock(&g_lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-#ifdef CONFIG_ESP32S3_SPI_FLASH_SUPPORT_PSRAM_STACK
-  if (stack_is_psram())
-    {
-      ret = esp32s3_async_op(SPIFLASH_OP_CODE_ENCRYPT_WRITE, offset,
-                             buffer, size, 0);
-    }
-  else
-#endif
-    {
-      ret = spi_flash_write_encrypted(offset, buffer, size);
-    }
-
-  nxmutex_unlock(&g_lock);
-#ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s()=%d\n", __func__, ret);
-#endif
-  return ret;
-}
-
-/****************************************************************************
- * Name: esp32s3_write_encrypt
- *
- * Description:
- *   Write data to SPI Flash at designated address by SPI Flash hardware
- *   encryption.
- *
- * Input Parameters:
- *   dev    - MTD device data
- *   offset - target address offset, must be 16Bytes-aligned
- *   nbytes - data number, must be 16Bytes-aligned
- *   buffer - data buffer pointer
- *
- * Returned Value:
- *   Writen bytes if success or a negative value if fail.
- *
- ****************************************************************************/
-
-static ssize_t esp32s3_write_encrypt(struct mtd_dev_s *dev, off_t offset,
-                                     size_t nbytes, const uint8_t *buffer)
-{
-  ssize_t ret;
-  size_t n;
-  off_t addr;
-  size_t wbytes;
-  uint32_t step;
-  uint8_t enc_buf[SPI_FLASH_ENCRYPT_UNIT_SIZE];
-
-  if ((offset % SPI_FLASH_ENCRYPT_MIN_SIZE) ||
-      (nbytes % SPI_FLASH_ENCRYPT_MIN_SIZE))
-    {
-      return -EINVAL;
-    }
-  else if (nbytes == 0)
-    {
-      return 0;
-    }
-
-#ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, offset, nbytes, buffer);
-#endif
-
-  for (n = 0; n < nbytes; n += step)
-    {
-      /* The temporary buffer need to be seperated into
-       * 16-bytes, 32-bytes, 64-bytes(if supported).
-       */
-
-      addr = offset + n;
-      if ((addr % 64) == 0 && (nbytes - n) >= 64)
-        {
-          wbytes = 64;
-        }
-      else if ((addr % 32) == 0 && (nbytes - n) >= 32)
-        {
-          wbytes = 32;
-        }
-      else
-        {
-          wbytes = 16;
-        }
-
-      memcpy(enc_buf, buffer + n, wbytes);
-      step = wbytes;
-      ret = esp32s3_writedata_encrypt(dev, addr, wbytes, enc_buf);
-      if (ret < 0)
-        {
-          break;
-        }
-    }
-
-  if (ret >= 0)
-    {
-      ret = nbytes;
-    }
-
-#ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("esp32s3_write_encrypt()=%d\n", ret);
-#endif
-
   return ret;
 }
 
@@ -801,11 +639,9 @@ static ssize_t esp32s3_write(struct mtd_dev_s *dev, off_t offset,
     }
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n",
-        __func__, dev, offset, nbytes, buffer);
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, offset, nbytes, buffer);
 
-  finfo("spi_flash_write(0x%" PRIxOFF ", %p, %zu)\n",
-        offset, buffer, nbytes);
+  finfo("spi_flash_write(0x%x, %p, %d)\n", offset, buffer, nbytes);
 #endif
 
   /* Acquire the mutex. */
@@ -820,7 +656,7 @@ static ssize_t esp32s3_write(struct mtd_dev_s *dev, off_t offset,
   if (stack_is_psram())
     {
       ret = esp32s3_async_op(SPIFLASH_OP_CODE_WRITE, offset,
-                             buffer, nbytes, 0);
+                             buffer, nbytes);
     }
   else
 #endif
@@ -868,11 +704,10 @@ static ssize_t esp32s3_bwrite_encrypt(struct mtd_dev_s *dev,
   uint32_t size = nblocks * MTD_BLK_SIZE;
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n", __func__, dev, startblock,
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock,
         nblocks, buffer);
 
-  finfo("spi_flash_write_encrypted(0x%x, %p, %" PRIu32 ")\n",
-        addr, buffer, size);
+  finfo("spi_flash_write_encrypted(0x%x, %p, %d)\n", addr, buffer, size);
 #endif
 
   ret = nxmutex_lock(&g_lock);
@@ -885,7 +720,7 @@ static ssize_t esp32s3_bwrite_encrypt(struct mtd_dev_s *dev,
   if (stack_is_psram())
     {
       ret = esp32s3_async_op(SPIFLASH_OP_CODE_ENCRYPT_WRITE, addr,
-                             buffer, size, 0);
+                             buffer, size);
     }
   else
 #endif
@@ -931,7 +766,7 @@ static ssize_t esp32s3_bwrite(struct mtd_dev_s *dev, off_t startblock,
   uint32_t size = nblocks * MTD_BLK_SIZE;
 
 #ifdef CONFIG_ESP32S3_STORAGE_MTD_DEBUG
-  finfo("%s(%p, 0x%" PRIxOFF ", %zu, %p)\n", __func__, dev, startblock,
+  finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock,
         nblocks, buffer);
 #endif
 
@@ -1027,43 +862,6 @@ static int esp32s3_ioctl(struct mtd_dev_s *dev, int cmd,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: esp32s3_set_bank
- *
- * Description:
- *   Set Ext-SRAM-Cache mmu mapping.
- *
- * Input Parameters:
- *   virt_bank - Beginning of the virtual bank
- *   phys_bank - Beginning of the physical bank
- *   ct        - Number of banks
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void esp32s3_set_bank(int virt_bank, int phys_bank, int ct)
-{
-  int ret;
-  uint32_t vaddr = SOC_EXTRAM_DATA_LOW + MMU_PAGE_SIZE * virt_bank;
-  uint32_t paddr = phys_bank * MMU_PAGE_SIZE;
-#ifdef CONFIG_ESP32S3_SPI_FLASH_SUPPORT_PSRAM_STACK
-  if (stack_is_psram())
-    {
-      ret = esp32s3_async_op(SPIFLASH_OP_CODE_SET_BANK, vaddr, NULL, ct,
-                             paddr);
-    }
-  else
-#endif
-    {
-      ret = cache_dbus_mmu_map(vaddr, paddr, ct);
-    }
-
-  DEBUGASSERT(ret == 0);
-  UNUSED(ret);
-}
 
 /****************************************************************************
  * Name: esp32s3_spiflash_alloc_mtdpart

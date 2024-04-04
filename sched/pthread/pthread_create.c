@@ -40,7 +40,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/pthread.h>
 
-#include "task/task.h"
 #include "sched/sched.h"
 #include "group/group.h"
 #include "clock/clock.h"
@@ -209,18 +208,13 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Allocate a TCB for the new task. */
 
-  ptcb = kmm_zalloc(sizeof(struct pthread_tcb_s));
+  ptcb = (FAR struct pthread_tcb_s *)
+            kmm_zalloc(sizeof(struct pthread_tcb_s));
   if (!ptcb)
     {
       serr("ERROR: Failed to allocate TCB\n");
       return ENOMEM;
     }
-
-  ptcb->cmn.flags |= TCB_FLAG_FREE_TCB;
-
-  /* Initialize the task join */
-
-  nxtask_joininit(&ptcb->cmn);
 
   /* Bind the parent's group to the new TCB (we have not yet joined the
    * group).
@@ -479,7 +473,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   else
     {
       sched_unlock();
-      dq_rem((FAR dq_entry_t *)ptcb, list_inactivetasks());
+      dq_rem((FAR dq_entry_t *)ptcb, &g_inactivetasks);
 
       errcode = EIO;
       goto errout_with_tcb;

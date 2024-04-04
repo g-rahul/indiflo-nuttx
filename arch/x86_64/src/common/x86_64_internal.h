@@ -32,7 +32,6 @@
 #  include <nuttx/sched.h>
 #  include <stdint.h>
 #  include <arch/io.h>
-#  include <arch/multiboot2.h>
 #endif
 
 /****************************************************************************
@@ -64,7 +63,7 @@
 #    undef  USE_SERIALDRIVER
 #    undef  USE_EARLYSERIALINIT
 #    undef  CONFIG_DEV_LOWCONSOLE
-#  elif defined(CONFIG_16550_UART)
+#  else
 #    define USE_SERIALDRIVER 1
 #    define USE_EARLYSERIALINIT 1
 #  endif
@@ -196,11 +195,6 @@ void x86_64_checktasks(void);
 
 void x86_64_syscall(uint64_t *regs);
 
-#ifdef CONFIG_ARCH_MULTIBOOT2
-void x86_64_mb2_fbinitialize(struct multiboot_tag_framebuffer *tag);
-void fb_putc(char ch);
-#endif
-
 /* Defined in up_allocateheap.c */
 
 #if CONFIG_MM_REGIONS > 1
@@ -221,7 +215,7 @@ void x86_64_timer_initialize(void);
 
 /* Defined in board/x86_64_network.c */
 
-#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
+#ifdef CONFIG_NET
 void x86_64_netinitialize(void);
 #else
 #  define x86_64_netinitialize()
@@ -233,12 +227,6 @@ void x86_64_usbuninitialize(void);
 #else
 #  define x86_64_usbinitialize()
 #  define x86_64_usbuninitialize()
-#endif
-
-/* Defined in x86_64_pci.c */
-
-#ifdef CONFIG_PCI
-void x86_64_pci_init(void);
 #endif
 
 #endif /* __ASSEMBLY__ */

@@ -86,15 +86,6 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > sram AT > flash
 
-    /* Global data not cleared after reset. */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-    } > sram
-
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -103,6 +94,15 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _ebss = ABSOLUTE(.);
+    } > sram
+
+    /* Global data not cleared after reset. */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
     } > sram
 
     /* Stabs debugging sections. */

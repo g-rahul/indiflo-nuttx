@@ -88,9 +88,9 @@ First make sure that ``esptool.py`` is installed.  This tool is used to convert
 the ELF to a compatible ESP32-C6 image and to flash the image into the board.
 It can be installed with: ``pip install esptool``.
 
-Configure the NuttX project: ``./tools/configure.sh esp32c6-devkitc:nsh`` or
-``./tools/configure.sh esp32c6-devkitm:nsh``Run ``make`` to build the project.
-Note that the conversion mentioned above is included in the build process.
+Configure the NuttX project: ``./tools/configure.sh esp32c6-devkit:nsh``
+Run ``make`` to build the project.  Note that the conversion mentioned above is
+included in the build process.
 The ``esptool.py`` command to flash all the binaries is::
 
      esptool.py --chip esp32c6 --port /dev/ttyUSBXX --baud 921600 write_flash 0x0 bootloader.bin 0x8000 partition-table.bin 0x10000 nuttx.bin
@@ -105,35 +105,6 @@ for the ESP32-C6 as explained above.
 Note that this step is required only one time.  Once the bootloader and partition
 table are flashed, we don't need to flash them again.  So subsequent builds
 would just require: ``make flash ESPTOOL_PORT=/dev/ttyUSBXX``
-
-Debugging with OpenOCD
-======================
-
-Download and build OpenOCD from Espressif, that can be found in
-https://github.com/espressif/openocd-esp32
-
-You don not need an external JTAG is to debug, the ESP32-C6 integrates a
-USB-to-JTAG adapter.
-
-OpenOCD can then be used::
-
-   openocd -c 'set ESP_RTOS none' -f board/esp32c6-builtin.cfg
-
-If you want to debug with an external JTAG adapter it can
-be connected as follows::
-
-  TMS -> GPIO4
-  TDI -> GPIO5
-  TCK -> GPIO6
-  TDO -> GPIO7
-
-Furthermore, an efuse needs to be burnt to be able to debug::
-
-  espefuse.py -p <port> burn_efuse DIS_USB_JTAG
-
-OpenOCD can then be used::
-
-  openocd  -c 'set ESP_RTOS none' -f board/esp32c6-ftdi.cfg
 
 Peripheral Support
 ==================
@@ -150,25 +121,25 @@ CAN/TWAI         No
 DMA              No
 ECC              No
 eFuse            No
-GPIO             Yes
+GPIO             No
 HMAC             No
 I2C              No
 I2S              No
 Int. Temp.       No
 LED              No
-LED_PWM          Yes
+LED_PWM          No
 MCPWM            No
 Pulse Counter    No
 RMT              No
 RNG              No
 RSA              No
-RTC              Yes
+RTC              No
 SD/MMC           No
 SDIO             No
 SHA              No
 SPI              No
-SPIFLASH         Yes
-Timers           Yes
+SPIFLASH         No
+Timers           No
 UART             Yes
 Watchdog         Yes
 Wifi             No

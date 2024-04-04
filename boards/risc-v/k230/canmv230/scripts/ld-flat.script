@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/risc-v/k230/canmv230/scripts/ld-flat.script
+ * boards/risc-v/qemu-rv/rv-virt/scripts/ld.script
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,12 +18,9 @@
  *
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-
 SECTIONS
 {
-  . = CONFIG_RAM_START;
+  . = 0x08000000;
 
   .text :
     {
@@ -117,7 +114,7 @@ SECTIONS
       _ebss = . ;
     }
 
-    /* Stabs debugging sections. */
+    /* Stabs debugging sections.    */
 
     .stab 0 : { *(.stab) }
     .stabstr 0 : { *(.stabstr) }

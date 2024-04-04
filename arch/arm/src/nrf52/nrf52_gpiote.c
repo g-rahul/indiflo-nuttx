@@ -53,9 +53,8 @@
 
 struct nrf52_gpiote_callback_s
 {
-  xcpt_t    callback;
-  void     *arg;
-  uint32_t  pinset;
+  xcpt_t callback;
+  void  *arg;
 };
 
 /****************************************************************************
@@ -463,15 +462,12 @@ int nrf52_gpiote_set_event(uint32_t pinset,
 
   flags = enter_critical_section();
 
-  /* Get free channel or channel already used by pinset */
+  /* Get free channel */
 
   for (i = 0; i < GPIOTE_CHANNELS; i++)
     {
-      if (g_gpiote_ch_callbacks[i].callback == NULL ||
-          g_gpiote_ch_callbacks[i].pinset == pinset)
+      if (g_gpiote_ch_callbacks[i].callback == NULL)
         {
-          g_gpiote_ch_callbacks[i].pinset = pinset;
-
           /* Configure channel */
 
           nrf52_gpiote_set_ch_event(pinset, i,

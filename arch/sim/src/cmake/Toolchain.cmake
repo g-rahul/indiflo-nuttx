@@ -99,18 +99,13 @@ if(CONFIG_CXX_STANDARD)
 endif()
 
 set(ARCHCFLAGS "-Wstrict-prototypes")
+set(ARCHCXXFLAGS "-nostdinc++")
 
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -nostdinc++")
-else()
-  set(ARCHCXXFLAGS "${ARCHCXXFLAGS} -D_STDLIB_H_")
-endif()
-
-if(NOT CONFIG_CXX_EXCEPTION)
+if(CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
 endif()
 
-if(NOT CONFIG_CXX_RTTI)
+if(CONFIG_CXX_RTTI)
   string(APPEND ARCHCXXFLAGS " -fno-rtti")
 endif()
 

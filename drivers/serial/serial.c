@@ -181,7 +181,7 @@ static int uart_putxmitchar(FAR uart_dev_t *dev, int ch, bool oktoblock)
 
           dev->xmit.buffer[dev->xmit.head] = ch;
           dev->xmit.head = nexthead;
-          break;
+          return OK;
         }
 
       /* The TX buffer is full.  Should be block, waiting for the hardware
@@ -874,8 +874,10 @@ static ssize_t uart_read(FAR struct file *filep,
                 {
                   /* Skipping character count down */
 
-                  dev->escape--;
-                  continue;
+                  if (dev->escape-- > 0)
+                    {
+                      continue;
+                    }
                 }
 
               /* Echo if the character is not a control byte */

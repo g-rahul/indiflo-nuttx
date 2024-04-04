@@ -40,7 +40,6 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/spawn.h>
-#include <nuttx/queue.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -413,7 +412,7 @@ struct inode
   uint16_t          i_flags;    /* Flags for inode */
   union inode_ops_u u;          /* Inode operations */
   ino_t             i_ino;      /* Inode serial number */
-#if defined(CONFIG_PSEUDOFS_FILE) || defined(CONFIG_FS_SHMFS)
+#ifdef CONFIG_PSEUDOFS_FILE
   size_t            i_size;     /* The size of per inode driver */
 #endif
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
@@ -469,11 +468,7 @@ struct file
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
 #ifdef CONFIG_FDSAN
-  uint64_t          f_tag_fdsan; /* File owner fdsan tag, init to 0 */
-#endif
-
-#ifdef CONFIG_FDCHECK
-  uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
+  uint64_t          f_tag;      /* file owner tag, init to 0 */
 #endif
 };
 
@@ -489,15 +484,6 @@ struct filelist
   spinlock_t        fl_lock;    /* Manage access to the file list */
   uint8_t           fl_rows;    /* The number of rows of fl_files array */
   FAR struct file **fl_files;   /* The pointer of two layer file descriptors array */
-
-  /* Pre-allocated files to avoid allocator access during thread creation
-   * phase, For functional safety requirements, increase
-   * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK could also avoid allocator access
-   * caused by the file descriptor exceeding the limit.
-   */
-
-  FAR struct file  *fl_prefile;
-  FAR struct file   fl_prefiles[CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
 };
 
 /* The following structure defines the list of files used for standard C I/O.
@@ -539,7 +525,7 @@ struct filelist
 #ifdef CONFIG_FILE_STREAM
 struct file_struct
 {
-  sq_entry_t              fs_entry;     /* Entry of file stream */
+  FAR struct file_struct *fs_next;      /* Pointer to next file stream */
   rmutex_t                fs_lock;      /* Recursive lock */
   cookie_io_functions_t   fs_iofunc;    /* Callbacks to user / system functions */
   FAR void               *fs_cookie;    /* Pointer to file descriptor / cookie struct */
@@ -564,7 +550,8 @@ struct streamlist
 {
   mutex_t                 sl_lock;   /* For thread safety */
   struct file_struct      sl_std[3];
-  sq_queue_t              sl_queue;
+  FAR struct file_struct *sl_head;
+  FAR struct file_struct *sl_tail;
 };
 #endif /* CONFIG_FILE_STREAM */
 
@@ -1140,25 +1127,6 @@ int fs_getfilep(int fd, FAR struct file **filep);
  ****************************************************************************/
 
 int file_close(FAR struct file *filep);
-
-/****************************************************************************
- * Name: file_close_without_clear
- *
- * Description:
- *   Close a file that was previously opened with file_open(), but without
- *   clear filep.
- *
- * Input Parameters:
- *   filep - A pointer to a user provided memory location containing the
- *           open file data returned by file_open().
- *
- * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returned on
- *   any failure to indicate the nature of the failure.
- *
- ****************************************************************************/
-
-int file_close_without_clear(FAR struct file *filep);
 
 /****************************************************************************
  * Name: nx_close_from_tcb

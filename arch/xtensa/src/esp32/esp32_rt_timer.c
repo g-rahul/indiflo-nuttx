@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/kmalloc.h>

@@ -44,7 +44,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <stdio.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>

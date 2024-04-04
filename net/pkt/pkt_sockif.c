@@ -242,7 +242,7 @@ static int pkt_bind(FAR struct socket *psock,
 
       ifindex = ((FAR struct sockaddr_ll *)addr)->sll_ifindex;
 
-      /* Check if we have that interface */
+      /* Get the MAC address of that interface */
 
       dev = netdev_findbyindex(ifindex);
       if (dev == NULL)
@@ -250,9 +250,18 @@ static int pkt_bind(FAR struct socket *psock,
           return -EADDRNOTAVAIL;
         }
 
-      /* Put ifindex into connection */
+      /* Only Ethernet is supported */
+
+      if (dev->d_lltype != NET_LL_ETHERNET &&
+          dev->d_lltype != NET_LL_IEEE80211)
+        {
+          return -EAFNOSUPPORT;
+        }
+
+      /* Put ifindex and mac address into connection */
 
       conn->ifindex = ifindex;
+      memcpy(conn->lmac, dev->d_mac.ether.ether_addr_octet, 6);
 
       return OK;
     }

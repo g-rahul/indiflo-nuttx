@@ -348,8 +348,8 @@ static int cdcecm_txpoll(FAR struct net_driver_s *dev)
  *
  * Description:
  *   After a packet has been received and dispatched to the network, it
- *   may return with an outgoing packet.  This function checks for that
- *   case and performs the transmission if necessary.
+ *   may return return with an outgoing packet.  This function checks for
+ *   that case and performs the transmission if necessary.
  *
  * Input Parameters:
  *   priv - Reference to the driver state structure
@@ -401,7 +401,7 @@ static void cdcecm_receive(FAR struct cdcecm_driver_s *self)
    * configuration.
    */
 
-  /* Copy the data from the hardware to self->dev.d_buf.  Set
+  /* Copy the data data from the hardware to self->dev.d_buf.  Set
    * amount of data in self->dev.d_len
    */
 
@@ -950,7 +950,6 @@ static void cdcecm_resetconfig(FAR struct cdcecm_driver_s *self)
 static int cdcecm_setconfig(FAR struct cdcecm_driver_s *self, uint8_t config)
 {
   struct usb_epdesc_s epdesc;
-  bool is_high_speed;
   int ret = OK;
 
   if (config == self->config)
@@ -980,7 +979,7 @@ static int cdcecm_setconfig(FAR struct cdcecm_driver_s *self, uint8_t config)
 
   self->epint->priv = self;
 
-  is_high_speed = (self->usbdev.speed == USB_SPEED_HIGH);
+  bool is_high_speed = (self->usbdev.speed == USB_SPEED_HIGH);
   cdcecm_mkepdesc(CDCECM_EP_BULKIN_IDX,
                   &epdesc, &self->devinfo, is_high_speed);
   ret = EP_CONFIGURE(self->epbulkin, &epdesc, false);
@@ -1366,7 +1365,7 @@ static int16_t cdcecm_mkcfgdesc(FAR uint8_t *desc,
 
   if (desc)
     {
-      FAR struct usb_ifdesc_s *ifdesc;
+      FAR struct usb_ifdesc_s *ifdesc = (FAR struct usb_ifdesc_s *)desc;
 
       ifdesc = (FAR struct usb_ifdesc_s *)desc;
       ifdesc->len      = USB_SIZEOF_IFDESC;
@@ -1386,7 +1385,7 @@ static int16_t cdcecm_mkcfgdesc(FAR uint8_t *desc,
 
   if (desc)
     {
-      FAR struct usb_ifdesc_s *ifdesc;
+      FAR struct usb_ifdesc_s *ifdesc = (FAR struct usb_ifdesc_s *)desc;
 
       ifdesc = (FAR struct usb_ifdesc_s *)desc;
       ifdesc->len      = USB_SIZEOF_IFDESC;

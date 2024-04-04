@@ -99,6 +99,7 @@ struct stm32_rptun_dev_s
   bool                        master;
   struct stm32_rptun_shmem_s *shmem;
   char                        cpuname[RPMSG_NAME_SIZE + 1];
+  char                        shmemname[RPMSG_NAME_SIZE + 1];
 };
 
 /****************************************************************************
@@ -106,6 +107,9 @@ struct stm32_rptun_dev_s
  ****************************************************************************/
 
 static const char *stm32_rptun_get_cpuname(struct rptun_dev_s *dev);
+static const char *stm32_rptun_get_firmware(struct rptun_dev_s *dev);
+static const struct rptun_addrenv_s *
+stm32_rptun_get_addrenv(struct rptun_dev_s *dev);
 static struct rptun_rsc_s *
 stm32_rptun_get_resource(struct rptun_dev_s *dev);
 static bool stm32_rptun_is_autostart(struct rptun_dev_s *dev);
@@ -129,6 +133,8 @@ static void stm32_rptun_panic(struct rptun_dev_s *dev);
 static const struct rptun_ops_s g_stm32_rptun_ops =
 {
   .get_cpuname       = stm32_rptun_get_cpuname,
+  .get_firmware      = stm32_rptun_get_firmware,
+  .get_addrenv       = stm32_rptun_get_addrenv,
   .get_resource      = stm32_rptun_get_resource,
   .is_autostart      = stm32_rptun_is_autostart,
   .is_master         = stm32_rptun_is_master,
@@ -165,6 +171,25 @@ static const char *stm32_rptun_get_cpuname(struct rptun_dev_s *dev)
                                  struct stm32_rptun_dev_s, rptun);
 
   return priv->cpuname;
+}
+
+/****************************************************************************
+ * Name: stm32_rptun_get_firmware
+ ****************************************************************************/
+
+static const char *stm32_rptun_get_firmware(struct rptun_dev_s *dev)
+{
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: stm32_rptun_get_addrenv
+ ****************************************************************************/
+
+static const struct rptun_addrenv_s *
+stm32_rptun_get_addrenv(struct rptun_dev_s *dev)
+{
+  return NULL;
 }
 
 /****************************************************************************
@@ -451,7 +476,7 @@ static int stm32_rptun_thread(int argc, char *argv[])
  * Public Functions
  ****************************************************************************/
 
-int stm32_rptun_init(const char *cpuname)
+int stm32_rptun_init(const char *shmemname, const char *cpuname)
 {
   struct stm32_rptun_dev_s *dev = &g_rptun_dev;
   int                       ret = OK;
@@ -481,6 +506,7 @@ int stm32_rptun_init(const char *cpuname)
 
   dev->rptun.ops = &g_stm32_rptun_ops;
   strncpy(dev->cpuname, cpuname, RPMSG_NAME_SIZE);
+  strncpy(dev->shmemname, shmemname, RPMSG_NAME_SIZE);
 
   ret = rptun_initialize(&dev->rptun);
   if (ret < 0)
@@ -500,4 +526,44 @@ int stm32_rptun_init(const char *cpuname)
 
 errout:
   return ret;
+}
+
+/****************************************************************************
+ * Name: up_addrenv_va_to_pa
+ *
+ * Description:
+ *   This is needed by openamp/libmetal/lib/system/nuttx/io.c:78. The
+ *   physical memory is mapped as virtual.
+ *
+ * Input Parameters:
+ *   va_
+ *
+ * Returned Value:
+ *   va
+ *
+ ****************************************************************************/
+
+uintptr_t up_addrenv_va_to_pa(void *va)
+{
+  return (uintptr_t)va;
+}
+
+/****************************************************************************
+ * Name: up_addrenv_pa_to_va
+ *
+ * Description:
+ *   This is needed by openamp/libmetal/lib/system/nuttx/io.c. The
+ *   physical memory is mapped as virtual.
+ *
+ * Input Parameters:
+ *   pa
+ *
+ * Returned Value:
+ *   pa
+ *
+ ****************************************************************************/
+
+void *up_addrenv_pa_to_va(uintptr_t pa)
+{
+  return (void *)pa;
 }

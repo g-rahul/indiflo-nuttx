@@ -363,7 +363,6 @@ int icmpv6_autoconfig(FAR struct net_driver_s *dev)
   ret = netdev_ipv6_add(dev, lladdr, net_ipv6_mask2pref(g_ipv6_llnetmask));
   if (ret < 0)
     {
-      net_unlock();
       return ret;
     }
 

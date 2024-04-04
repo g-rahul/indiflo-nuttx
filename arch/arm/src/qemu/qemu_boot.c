@@ -26,7 +26,6 @@
 
 #include "arm_internal.h"
 
-#include "qemu_boot.h"
 #include "qemu_irq.h"
 #include "qemu_memorymap.h"
 
@@ -48,10 +47,6 @@
 
 void arm_boot(void)
 {
-  /* Perf init */
-
-  up_perf_init(0);
-
   /* Set the page table for section */
 
   qemu_setupmappings();
@@ -73,12 +68,4 @@ void arm_boot(void)
 
   arm_earlyserialinit();
 #endif
-
-  /* Now we can enable all other CPUs.  The enabled CPUs will start execution
-   * at __cpuN_start and, after very low-level CPU initialization has been
-   * performed, will branch to arm_cpu_boot()
-   * (see arch/arm/src/armv7-a/smp.h)
-   */
-
-  qemu_cpu_enable();
 }

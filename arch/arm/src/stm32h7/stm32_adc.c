@@ -55,7 +55,6 @@
 #include <string.h>
 
 #include <arch/board/board.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
@@ -1253,8 +1252,6 @@ static void adc_enable(struct stm32_dev_s *priv)
   /* Wait for hardware to be ready for conversions */
 
   while (!(adc_getreg(priv, STM32_ADC_ISR_OFFSET) & ADC_INT_ADRDY));
-
-  adc_modifyreg(priv, STM32_ADC_ISR_OFFSET, 0, ADC_INT_ADRDY);
 }
 
 /****************************************************************************
@@ -1587,7 +1584,7 @@ static void adc_setupclock(struct stm32_dev_s *priv)
   uint32_t max_clock = 36000000;
   uint32_t src_clock;
   uint32_t adc_clock;
-  uint32_t setbits = 0;
+  uint32_t setbits;
 
   /* The maximum clock is different for rev Y devices and rev V devices.
    * rev V can support an ADC clock of up to 50MHz. rev Y only supports
@@ -2010,13 +2007,6 @@ static int adc_interrupt(struct adc_dev_s *dev, uint32_t adcisr)
       /* Stop ADC conversions to avoid continuous interrupts */
 
       adc_startconv(priv, false);
-
-      /* Clear the interrupt. This register only accepts write 1's so its
-       * safe to only set the 1 bit without regard for the rest of the
-       * register
-       */
-
-      adc_putreg(priv, STM32_ADC_ISR_OFFSET, ADC_INT_AWD1);
     }
 
   /* OVR: Overrun */
@@ -2045,11 +2035,6 @@ static int adc_interrupt(struct adc_dev_s *dev, uint32_t adcisr)
 
           priv->cb->au_reset(dev);
         }
-
-      /* Clear the interrupt. This register only accepts write 1's so its
-       * safe to only set the 1 bit without regard for the rest of the
-       * register
-       */
 
       adc_putreg(priv, STM32_ADC_ISR_OFFSET, ADC_INT_OVR);
     }
@@ -2105,10 +2090,6 @@ static int adc_interrupt(struct adc_dev_s *dev, uint32_t adcisr)
             }
         }
       while ((adc_getreg(priv, STM32_ADC_ISR_OFFSET) & ADC_INT_EOC) != 0);
-
-      /* We dont't add EOC to the bits to clear. It will cause a race
-       * condition.  EOC should only be cleared by reading the ADC_DR
-       */
     }
 
   return OK;
@@ -2138,6 +2119,10 @@ static int adc12_interrupt(int irq, void *context, void *arg)
   if (pending != 0)
     {
       adc_interrupt(&g_adcdev1, regval);
+
+      /* Clear interrupts */
+
+      putreg32(regval, STM32_ADC1_ISR);
     }
 #endif
 
@@ -2147,6 +2132,10 @@ static int adc12_interrupt(int irq, void *context, void *arg)
   if (pending != 0)
     {
       adc_interrupt(&g_adcdev2, regval);
+
+      /* Clear interrupts */
+
+      putreg32(regval, STM32_ADC2_ISR);
     }
 #endif
 
@@ -2177,6 +2166,10 @@ static int adc3_interrupt(int irq, void *context, void *arg)
   if (pending != 0)
     {
       adc_interrupt(&g_adcdev3, regval);
+
+      /* Clear interrupts */
+
+      putreg32(regval, STM32_ADC3_ISR);
     }
 
   return OK;

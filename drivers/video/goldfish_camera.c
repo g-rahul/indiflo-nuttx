@@ -34,7 +34,6 @@
 #include <nuttx/video/imgsensor.h>
 #include <nuttx/video/imgdata.h>
 #include <nuttx/video/video.h>
-#include <nuttx/video/v4l2_cap.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -780,7 +779,10 @@ int goldfish_camera_initialize(void)
           snprintf(devpath, sizeof(devpath), "/dev/video%zd", i);
         }
 
-      capture_register(devpath, &priv[i]->data, &sensor, 1);
+      video_register(devpath,
+                     &priv[i]->data,
+                     &sensor,
+                     1);
     }
 
   return 0;

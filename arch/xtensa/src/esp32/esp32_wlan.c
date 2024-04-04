@@ -31,7 +31,6 @@
 #include <debug.h>
 #include <arpa/inet.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/crc64.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/arch.h>

@@ -25,7 +25,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <nuttx/tls.h>
 

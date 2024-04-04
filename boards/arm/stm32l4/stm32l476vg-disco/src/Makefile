@@ -48,8 +48,4 @@ ifeq ($(CONFIG_BOARDCTL),y)
 CSRCS += stm32_appinit.c
 endif
 
-ifeq ($(CONFIG_ETC_ROMFS),y)
-CSRCS += etc_romfs.c
-endif
-
 include $(TOPDIR)/boards/Board.mk

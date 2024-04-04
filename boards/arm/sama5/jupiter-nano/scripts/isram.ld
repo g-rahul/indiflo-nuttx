@@ -84,15 +84,6 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > isram
 
-    /* Uninitialized data */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-    } > isram
-
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -101,6 +92,15 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _ebss = ABSOLUTE(.);
+    } > isram
+
+    /* Uninitialized data */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
     } > isram
 
     /* Stabs debugging sections. */

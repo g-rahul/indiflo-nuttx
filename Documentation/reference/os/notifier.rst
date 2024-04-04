@@ -1,5 +1,3 @@
-.. _notifier_chain:
-
 ==============
 Notifier Chain
 ==============

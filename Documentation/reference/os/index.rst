@@ -17,6 +17,7 @@ in other header files.
   iob.rst
   led.rst
   mutex.rst
+  nat.rst
   newreno.rst
   notifier.rst
   nuttx.rst
@@ -25,3 +26,4 @@ in other header files.
   smp.rst
   time_clock.rst
   wqueue.rst
+  netdev.rst

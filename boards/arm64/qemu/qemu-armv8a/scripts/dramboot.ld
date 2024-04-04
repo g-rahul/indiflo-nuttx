@@ -33,7 +33,6 @@ SECTIONS
   _start = .;
   .text : {
         _stext = .;            /* Text section */
-       *(.start .start.*)      /* Place __start here */
        *(.text)
        *(.text.cold)
        *(.text.unlikely)

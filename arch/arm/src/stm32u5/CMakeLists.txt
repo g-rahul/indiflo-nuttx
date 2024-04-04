@@ -25,7 +25,6 @@ set(SRCS
     stm32_irq.c
     stm32_lowputc.c
     stm32_rcc.c
-    stm32_i2c.c
     stm32_serial.c
     stm32_start.c
     stm32_waste.c
@@ -33,7 +32,6 @@ set(SRCS
     stm32_spi.c
     stm32_lse.c
     stm32_lsi.c
-    stm32u5xx_rcc.c
     stm32_pwr.c
     stm32_tim.c
     stm32_flash.c
@@ -55,8 +53,8 @@ if(CONFIG_DEBUG_FEATURES)
   list(APPEND SRCS stm32_dumpgpio.c)
 endif()
 
-if(CONFIG_USBDEV)
-  list(APPEND SRCS stm32_otgdev.c)
+if(CONFIG_STM32U5_STM32U585XX)
+  list(APPEND SRCS stm32u585xx_rcc.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

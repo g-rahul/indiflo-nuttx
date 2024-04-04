@@ -123,7 +123,7 @@ jobs:
 
     strategy:
       matrix:
-        boards: [arm-01, arm-02, arm-03, arm-04, arm-05, arm-06, arm-07, arm-08, arm-09, arm-10, arm-11, arm-12, arm-13, other, risc-v, sim-01, sim-02, xtensa]
+        boards: [arm-01, arm-02, arm-03, arm-04, arm-05, arm-06, arm-07, arm-08, arm-09, arm-10, arm-11, arm-12, arm-13, other, risc-v, sim-01, sim-02, xtensa, codechecker]
 
     steps:
       - name: Download Source Artifact
@@ -192,12 +192,12 @@ jobs:
 
       - name: Restore Tools Cache
         id: cache-tools
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         env:
           cache-name: ${{ runner.os }}-cache-tools
         with:
           path: ./sources/tools
-          key: ${{ runner.os }}-tools-${{ hashFiles('./sources/nuttx/tools/ci/platforms/darwin.sh') }}
+          key: ${{ runner.os }}-tools-${{ hashFiles('./sources/nuttx/tools/ci/cibuild.sh') }}
 
       - name: Export NuttX Repo SHA
         run: echo "nuttx_sha=`git -C sources/nuttx rev-parse HEAD`" >> $GITHUB_ENV
@@ -217,73 +217,5 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: macos-builds
-          path: buildartifacts/
-        continue-on-error: true
-
-  msys2:
-    needs: Fetch-Source
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        boards: [msys2]
-
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MSYS
-          update: false
-          install: >-
-            base-devel
-            gcc
-            gperf
-            automake
-            autoconf
-            git
-            python3
-            ncurses-devel
-            unzip
-            zip
-            tio
-            zlib-devel
-            cmake
-            ninja
-            python-pip 
-            vim
-
-      - name: pip3 install
-        run: |
-          pip3 install --root-user-action=ignore --no-cache-dir pyelftools cxxfilt kconfiglib
-
-      - run: git config --global core.autocrlf false
-
-      - name: Download Source Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: source-bundle
-          path: .
-
-      - name: Extract sources
-        run: tar zxf sources.tar.gz
-
-      - name: Export NuttX Repo SHA
-        run: echo "nuttx_sha=`git -C sources/nuttx rev-parse HEAD`" >> $GITHUB_ENV
-
-      - name: Run Builds
-        run: |
-          echo "::add-matcher::sources/nuttx/.github/gcc.json"
-          export ARTIFACTDIR=`pwd`/buildartifacts
-          git config --global --add safe.directory /github/workspace/sources/nuttx
-          git config --global --add safe.directory /github/workspace/sources/apps
-          cd sources/nuttx/tools/ci
-          ./cibuild.sh -g -i -A -C -R testlist/${{matrix.boards}}.dat
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: msys2-builds
           path: buildartifacts/
         continue-on-error: true

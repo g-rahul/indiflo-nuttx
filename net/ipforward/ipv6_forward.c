@@ -491,11 +491,20 @@ static int ipv6_forward_callback(FAR struct net_driver_s *fwddev,
     {
       /* Backup the forward IP packet */
 
-      iob = netdev_iob_clone(dev, true);
+      iob = iob_tryalloc(true);
       if (iob == NULL)
         {
-          nerr("ERROR: IOB clone failed when forwarding broadcast.\n");
+          nerr("ERROR: iob alloc failed when forward broadcast\n");
           return -ENOMEM;
+        }
+
+      iob_reserve(iob, CONFIG_NET_LL_GUARDSIZE);
+      ret = iob_clone_partial(dev->d_iob, dev->d_iob->io_pktlen, 0,
+                              iob, 0, true, false);
+      if (ret < 0)
+        {
+          iob_free_chain(iob);
+          return ret;
         }
 
       /* Recover the pointer to the IPv6 header in the receiving device's

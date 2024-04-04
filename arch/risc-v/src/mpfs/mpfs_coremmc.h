@@ -48,7 +48,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: mpfs_coremmc_sdio_initialize
+ * Name: sdio_initialize
  *
  * Description:
  *   Initialize SDIO for operation.
@@ -63,10 +63,10 @@ extern "C"
  ****************************************************************************/
 
 struct sdio_dev_s; /* See include/nuttx/sdio.h */
-struct sdio_dev_s *mpfs_coremmc_sdio_initialize(int slotno);
+struct sdio_dev_s *sdio_initialize(int slotno);
 
 /****************************************************************************
- * Name: mpfs_coremmc_sdio_mediachange
+ * Name: sdio_mediachange
  *
  * Description:
  *   Called by board-specific logic -- possibly from an interrupt handler --
@@ -84,10 +84,10 @@ struct sdio_dev_s *mpfs_coremmc_sdio_initialize(int slotno);
  *
  ****************************************************************************/
 
-void mpfs_coremmc_sdio_mediachange(struct sdio_dev_s *dev, bool cardinslot);
+void sdio_mediachange(struct sdio_dev_s *dev, bool cardinslot);
 
 /****************************************************************************
- * Name: mpfs_coremmc_sdio_wrprotect
+ * Name: sdio_wrprotect
  *
  * Description:
  *   Called by board-specific logic to report if the card in the slot is
@@ -102,7 +102,7 @@ void mpfs_coremmc_sdio_mediachange(struct sdio_dev_s *dev, bool cardinslot);
  *
  ****************************************************************************/
 
-void mpfs_coremmc_sdio_wrprotect(struct sdio_dev_s *dev, bool wrprotect);
+void sdio_wrprotect(struct sdio_dev_s *dev, bool wrprotect);
 
 #undef EXTERN
 #if defined(__cplusplus)

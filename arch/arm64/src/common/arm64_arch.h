@@ -32,7 +32,6 @@
  */
 #ifndef __ASSEMBLY__
   #include <stdint.h>
-  #include <nuttx/nuttx.h>
 #endif
 
 #include <sys/param.h>
@@ -143,6 +142,8 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define STRINGIFY(x)    #x
 
 #define GET_EL(mode)  (((mode) >> MODE_EL_SHIFT) & MODE_EL_MASK)
 

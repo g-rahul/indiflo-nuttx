@@ -52,8 +52,8 @@ struct gyro_t
 
 struct accel_gyro_st_s
 {
-  struct accel_t accel;
   struct gyro_t  gyro;
+  struct accel_t accel;
   uint32_t sensor_time;
 };
 

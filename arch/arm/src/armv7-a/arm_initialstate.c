@@ -137,14 +137,15 @@ void up_initial_state(struct tcb_s *tcb)
 
   cpsr |= (PSR_I_BIT | PSR_F_BIT);
 
-#elif !defined(CONFIG_ARCH_TRUSTZONE_SECURE) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-  /* Leave IRQs enabled (Also FIQs if CONFIG_ARCH_TRUSTZONE_SECURE or
-   * CONFIG_ARCH_HIPRI_INTERRUPT is selected)
-   */
+#else /* CONFIG_SUPPRESS_INTERRUPTS */
+  /* Leave IRQs enabled (Also FIQs if CONFIG_ARMV7A_DECODEFIQ is selected) */
+
+#ifndef CONFIG_ARMV7A_DECODEFIQ
 
   cpsr |= PSR_F_BIT;
 
-#endif
+#endif /* !CONFIG_ARMV7A_DECODEFIQ */
+#endif /* CONFIG_SUPPRESS_INTERRUPTS */
 
 #ifdef CONFIG_ARM_THUMB
   cpsr |= PSR_T_BIT;

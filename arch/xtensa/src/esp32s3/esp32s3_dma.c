@@ -52,9 +52,6 @@
 #  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
 #endif
 
-#define DMA_INVALID_PERIPH_ID        (0x3F)
-#define GDMA_CH_REG_ADDR(_r, _ch)    ((_r) + (_ch) * GDMA_REG_OFFSET)
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -170,55 +167,6 @@ int32_t esp32s3_dma_request(enum esp32s3_dma_periph_e periph,
 }
 
 /****************************************************************************
- * Name: esp32s3_dma_release
- *
- * Description:
- *   Release DMA channel from peripheral.
- *
- * Input Parameters:
- *   chan - Peripheral for which the DMA channel request was made
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void esp32s3_dma_release(int chan)
-{
-  DEBUGASSERT(chan  < ESP32S3_DMA_CHAN_MAX);
-
-  nxmutex_lock(&g_dma_lock);
-
-  /* Disconnect DMA TX channel from peripheral */
-
-  SET_GDMA_CH_REG(DMA_OUT_PERI_SEL_CH0_REG, chan, DMA_INVALID_PERIPH_ID);
-
-  /* Disconnect DMA RX channel from peripheral */
-
-  SET_GDMA_CH_REG(DMA_IN_PERI_SEL_CH0_REG, chan, DMA_INVALID_PERIPH_ID);
-  CLR_GDMA_CH_BITS(DMA_IN_CONF0_CH0_REG, chan, DMA_MEM_TRANS_EN_CH0_M);
-
-  /* Disable DMA TX/RX channels burst sending data */
-
-  CLR_GDMA_CH_BITS(DMA_OUT_CONF0_CH0_REG, chan, DMA_OUT_DATA_BURST_EN_CH0_M);
-  CLR_GDMA_CH_BITS(DMA_IN_CONF0_CH0_REG, chan, DMA_IN_DATA_BURST_EN_CH0_M);
-
-  /* Disable DMA TX/RX channels burst reading descriptor link */
-
-  CLR_GDMA_CH_BITS(DMA_OUT_CONF0_CH0_REG, chan, DMA_OUTDSCR_BURST_EN_CH0_M);
-  CLR_GDMA_CH_BITS(DMA_IN_CONF0_CH0_REG, chan, DMA_INDSCR_BURST_EN_CH0_M);
-
-  /* Reset the priority to 0 (lowest) */
-
-  SET_GDMA_CH_REG(DMA_OUT_PRI_CH0_REG, chan, 0);
-  SET_GDMA_CH_REG(DMA_IN_PRI_CH0_REG, chan, 0);
-
-  g_dma_chan_used[chan] = false;
-
-  nxmutex_unlock(&g_dma_lock);
-}
-
-/****************************************************************************
  * Name: esp32s3_dma_setup
  *
  * Description:
@@ -231,7 +179,6 @@ void esp32s3_dma_release(int chan)
  *   pbuf    - RX/TX buffer pointer
  *   len     - RX/TX buffer length
  *   tx      - true: TX mode (transmitter); false: RX mode (receiver)
- *   chan    - DMA channel of the receiver/transmitter
  *
  * Returned Value:
  *   Bound pbuf data bytes
@@ -239,7 +186,7 @@ void esp32s3_dma_release(int chan)
  ****************************************************************************/
 
 uint32_t esp32s3_dma_setup(struct esp32s3_dmadesc_s *dmadesc, uint32_t num,
-                           uint8_t *pbuf, uint32_t len, bool tx, int chan)
+                           uint8_t *pbuf, uint32_t len, bool tx)
 {
   int i;
   uint32_t regval;
@@ -247,59 +194,19 @@ uint32_t esp32s3_dma_setup(struct esp32s3_dmadesc_s *dmadesc, uint32_t num,
   uint8_t *pdata = pbuf;
   uint32_t data_len;
   uint32_t buf_len;
-  int alignment = 4;
-  int dma_size = ESP32S3_DMA_BUFFER_MAX_SIZE;
-  bool buffer_in_psram = esp32s3_ptr_extram(pdata);
-  int block_size_index = 0;
-  uint32_t addr = GDMA_CH_REG_ADDR(DMA_IN_CONF0_CH0_REG, chan);
-  bool burst_en = REG_GET_FIELD(addr, DMA_IN_DATA_BURST_EN_CH0);
 
   DEBUGASSERT(dmadesc != NULL);
   DEBUGASSERT(num > 0);
   DEBUGASSERT(pbuf != NULL);
   DEBUGASSERT(len > 0);
-  DEBUGASSERT(chan >= 0 && chan  < ESP32S3_DMA_CHAN_MAX);
-
-  if (!tx && buffer_in_psram)
-    {
-      addr = GDMA_CH_REG_ADDR(DMA_IN_CONF1_CH0_REG, chan);
-      block_size_index = REG_GET_FIELD(addr, DMA_IN_EXT_MEM_BK_SIZE_CH0);
-      switch (block_size_index)
-        {
-          case ESP32S3_DMA_EXT_MEMBLK_64B:
-            alignment = 64;
-            break;
-
-          case ESP32S3_DMA_EXT_MEMBLK_32B:
-            alignment = 32;
-            break;
-
-          case ESP32S3_DMA_EXT_MEMBLK_16B:
-          default:
-            alignment = 16;
-            break;
-        }
-
-      dma_size = 0x1000 - alignment;
-    }
-  else if(!tx && burst_en)
-    {
-      dma_size = ESP32S3_DMA_BUFLEN_MAX_4B_ALIGNED;
-    }
 
   for (i = 0; i < num; i++)
     {
-      data_len = MIN(bytes, dma_size);
-      if (!tx && (burst_en || buffer_in_psram))
-        {
-          /* Buffer length must be rounded to next alignment boundary. */
+      data_len = MIN(bytes, ESP32S3_DMA_BUFLEN_MAX);
 
-          buf_len = ALIGN_UP(data_len, alignment);
-        }
-      else
-        {
-          buf_len = data_len;
-        }
+      /* Buffer length must be rounded to next 32-bit boundary. */
+
+      buf_len = ALIGN_UP(data_len, sizeof(uintptr_t));
 
       dmadesc[i].ctrl = ESP32S3_DMA_CTRL_OWN;
 
@@ -556,39 +463,3 @@ void esp32s3_dma_init(void)
   nxmutex_unlock(&g_dma_lock);
 }
 
-/****************************************************************************
- * Name: esp32s3_dma_deinit
- *
- * Description:
- *   Deinitialize DMA driver.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void esp32s3_dma_deinit(void)
-{
-  nxmutex_lock(&g_dma_lock);
-
-  g_dma_ref--;
-
-  if (!g_dma_ref)
-    {
-      /* Disable DMA clock gating */
-
-      modifyreg32(DMA_MISC_CONF_REG, DMA_CLK_EN_M, 0);
-
-      /* Disable DMA module by gating the clock and asserting the reset
-       * signal.
-       */
-
-      modifyreg32(SYSTEM_PERIP_CLK_EN1_REG, SYSTEM_DMA_CLK_EN_M, 0);
-      modifyreg32(SYSTEM_PERIP_RST_EN1_REG, 0, SYSTEM_DMA_RST_M);
-    }
-
-  nxmutex_unlock(&g_dma_lock);
-}

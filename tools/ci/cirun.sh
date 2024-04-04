@@ -18,15 +18,10 @@ if [ "$BOARD" == "sim" ]; then
   mark="common or ${BOARD}"
 else
   if [ "${config:$((-2))}" == "64" ]; then
-    BOARD="${BOARD}64"
+  BOARD="${BOARD}64"
   fi
-  if [ "$BOARD" == "rv-virt" ]; then
-    target="qemu"
-    mark="qemu or rv_virt"
-  else
-    target="qemu"
-    mark=$target
-  fi
+  target="qemu"
+  mark=$target
 fi
 
 core=$target
@@ -40,9 +35,6 @@ ret="$?"
 find ${nuttx}/tools/ci/testrun -name '__pycache__' |xargs rm -rf
 find ${nuttx}/tools/ci/testrun -name '.pytest_cache' |xargs rm -rf
 rm -rf ${logs}
-rm -rf ${nuttx}/../apps/testing/ltp/ltp/
-rm -f ${nuttx}/../apps/testing/cmocka/cmocka.zip
-
 
 echo $ret
 exit $ret

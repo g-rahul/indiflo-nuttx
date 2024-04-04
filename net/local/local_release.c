@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#if defined(CONFIG_NET) && defined(CONFIG_NET_LOCAL)
 
 #include <errno.h>
 #include <assert.h>
@@ -77,7 +78,7 @@ int local_release(FAR struct local_conn_s *conn)
       /* Are there still clients waiting for a connection to the server? */
 
       for (waiter = dq_peek(&conn->u.server.lc_waiters);
-           waiter != NULL;
+           waiter;
            waiter = dq_next(&accept->u.accept.lc_waiter))
         {
           accept = container_of(waiter, struct local_conn_s,
@@ -99,3 +100,5 @@ int local_release(FAR struct local_conn_s *conn)
   net_unlock();
   return OK;
 }
+
+#endif /* CONFIG_NET && CONFIG_NET_LOCAL */

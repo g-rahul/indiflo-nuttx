@@ -25,9 +25,7 @@
  * Public Types
  ****************************************************************************/
 
-/* DO NOT CHANGE ORDER, IT MATCHES CODE IN drivers/eeprom/spieeprom.c and
- * drivers/mtd/at25ee.c
- */
+/* DO NOT CHANGE ORDER, IT MATCHES CODE IN drivers/eeprom/spieeprom.c */
 
 enum eeprom_25xx_e
 {

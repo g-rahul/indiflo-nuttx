@@ -34,7 +34,6 @@
 #include <nuttx/board.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/init.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/symtab.h>
 #include <nuttx/trace.h>
 #include <nuttx/wqueue.h>
@@ -42,7 +41,7 @@
 #include <nuttx/userspace.h>
 #include <nuttx/binfmt/binfmt.h>
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 #  include "paging/paging.h"
 #endif
 
@@ -50,11 +49,6 @@
 #include "wqueue/wqueue.h"
 #include "init/init.h"
 #include "misc/coredump.h"
-
-#ifdef CONFIG_ETC_ROMFS
-#  include <nuttx/drivers/ramdisk.h>
-#  include <sys/mount.h>
-#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -122,15 +116,6 @@ extern const int             CONFIG_INIT_NEXPORTS;
 #  define CONFIG_INIT_PRIORITY SCHED_PRIORITY_DEFAULT
 #endif
 
-#ifdef CONFIG_ETC_ROMFS
-#  define NSECTORS(b)        (((b)+CONFIG_ETC_ROMFSSECTSIZE-1)/CONFIG_ETC_ROMFSSECTSIZE)
-#  define MKMOUNT_DEVNAME(m) "/dev/ram" STRINGIFY(m)
-#  define MOUNT_DEVNAME      MKMOUNT_DEVNAME(CONFIG_ETC_ROMFSDEVNO)
-
-extern const unsigned char romfs_img[];
-extern const unsigned int romfs_img_len;
-#endif
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -151,7 +136,7 @@ extern const unsigned int romfs_img_len;
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 static inline void nx_pgworker(void)
 {
   /* Start the page fill worker kernel thread that will resolve page faults.
@@ -167,10 +152,10 @@ static inline void nx_pgworker(void)
   DEBUGASSERT(g_pgworker > 0);
 }
 
-#else /* CONFIG_LEGACY_PAGING */
+#else /* CONFIG_PAGING */
 #  define nx_pgworker()
 
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
 
 /****************************************************************************
  * Name: nx_workqueues
@@ -227,58 +212,6 @@ static inline void nx_workqueues(void)
 #endif /* CONFIG_SCHED_WORKQUEUE */
 
 /****************************************************************************
- * Name: nx_romfsetc
- *
- * Description: mount baked-in ROMFS image to /etc.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ETC_ROMFS
-static inline void nx_romfsetc(void)
-{
-  int ret;
-
-#ifndef CONFIG_ETC_CROMFS
-  /* Create a ROM disk for the /etc filesystem */
-
-  ret = romdisk_register(CONFIG_ETC_ROMFSDEVNO, romfs_img,
-                         NSECTORS(romfs_img_len),
-                         CONFIG_ETC_ROMFSSECTSIZE);
-  if (ret < 0)
-    {
-      ferr("ERROR: romdisk_register failed: %d\n", -ret);
-      return;
-    }
-#endif
-
-  /* Mount the file system */
-
-  finfo("Mounting ROMFS filesystem at target=%s with source=%s\n",
-        CONFIG_ETC_ROMFSMOUNTPT, MOUNT_DEVNAME);
-
-#if defined(CONFIG_ETC_CROMFS)
-  ret = nx_mount(MOUNT_DEVNAME, CONFIG_ETC_ROMFSMOUNTPT,
-                 "cromfs", MS_RDONLY, NULL);
-#else
-  ret = nx_mount(MOUNT_DEVNAME, CONFIG_ETC_ROMFSMOUNTPT,
-                 "romfs", MS_RDONLY, NULL);
-#endif
-  if (ret < 0)
-    {
-      ferr("ERROR: nx_mount(%s,%s,romfs) failed: %d\n",
-           MOUNT_DEVNAME, CONFIG_ETC_ROMFSMOUNTPT, ret);
-    }
-}
-
-#endif /* CONFIG_ETC_ROMFS */
-
-/****************************************************************************
  * Name: nx_start_application
  *
  * Description:
@@ -307,10 +240,6 @@ static inline void nx_start_application(void)
   posix_spawnattr_t attr;
 #endif
   int ret;
-
-#ifdef CONFIG_ETC_ROMFS
-  nx_romfsetc();
-#endif
 
 #ifdef CONFIG_BOARD_LATE_INITIALIZE
   /* Perform any last-minute, board-specific initialization, if so
@@ -456,8 +385,8 @@ static inline void nx_create_initthread(void)
  *   the conclusion of basic OS initialization.  These initial system tasks
  *   may include:
  *
- *   - pg_worker:   The page-fault worker thread (if CONFIG_LEGACY_PAGING is
- *                  defined).
+ *   - pg_worker:   The page-fault worker thread (only if CONFIG_PAGING is
+ *                  defined.
  *   - work_thread: The work thread.  This general thread can be used to
  *                  perform most any kind of queued work.  Its primary
  *                  function is to serve as the "bottom half" of device

@@ -29,7 +29,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/boardctl.h>
-#include <syslog.h>
 
 #ifdef CONFIG_ARCH_LOWPUTC
 #include <nuttx/arch.h>
@@ -189,14 +188,11 @@ static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
 {
   if (priv->head + 1 - priv->tail >= priv->size)
     {
-      bool ret = false;
-
       if (!priv->flush && !up_interrupt_context() && !sched_idletask())
         {
-          ret = syslog_rpmsg_transfer(priv, true);
+          syslog_rpmsg_transfer(priv, true);
         }
-
-      if (!ret)
+      else
         {
           /* Overwrite */
 

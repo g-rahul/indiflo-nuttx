@@ -93,8 +93,7 @@ int uname(FAR struct utsname *name)
 
   strlcpy(name->release,  CONFIG_VERSION_STRING, sizeof(name->release));
 
-#if defined(__DATE__) && defined(__TIME__) && \
-    !defined(CONFIG_LIBC_UNAME_DISABLE_TIMESTAMP)
+#if defined(__DATE__) && defined(__TIME__)
   snprintf(name->version, VERSION_NAMELEN, "%s %s %s",
            CONFIG_VERSION_BUILD, __DATE__, __TIME__);
 #else

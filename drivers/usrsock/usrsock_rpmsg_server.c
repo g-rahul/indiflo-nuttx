@@ -32,7 +32,6 @@
 
 #include <sys/ioctl.h>
 
-#include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/net/dns.h>
 #include <nuttx/net/net.h>

@@ -83,15 +83,6 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > sdram
 
-    /* Uninitialized data */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-    } > sdram
-
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -100,6 +91,15 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _ebss = ABSOLUTE(.);
+    } > sdram
+
+    /* Uninitialized data */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
     } > sdram
 
     /* Stabs debugging sections. */

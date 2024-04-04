@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 
 #include "pthread/pthread.h"
@@ -59,22 +58,32 @@
 
 void pthread_release(FAR struct task_group_s *group)
 {
-  FAR sq_entry_t *curr;
-  FAR sq_entry_t *next;
+  FAR struct join_s *join;
+  DEBUGASSERT(group);
 
   /* Visit and delete each join structure still in the list.  Since we
    * are last exiting thread of the group, no special protection should
    * be required.
    */
 
-  sq_for_every_safe(&group->tg_joinqueue, curr, next)
+  while (group->tg_joinhead)
     {
-      /* Deallocate the join structure */
+      /* Remove the join from the head of the list. */
 
-      kmm_free(container_of(curr, struct task_join_s, entry));
+      join = group->tg_joinhead;
+      group->tg_joinhead = join->next;
+
+      /* Destroy the join semaphores */
+
+      nxsem_destroy(&join->data_sem);
+      nxsem_destroy(&join->exit_sem);
+
+      /* And deallocate the join structure */
+
+      kmm_free(join);
     }
 
   /* Destroy the join list mutex */
 
-  nxrmutex_destroy(&group->tg_joinlock);
+  nxmutex_destroy(&group->tg_joinlock);
 }

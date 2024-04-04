@@ -112,19 +112,17 @@
 #define MM_MAX_CHUNK     (1 << MM_MAX_SHIFT)
 #define MM_NNODES        (MM_MAX_SHIFT - MM_MIN_SHIFT + 1)
 
-#if CONFIG_MM_DEFAULT_ALIGNMENT == 0
+#if CONFIG_MM_DFAULT_ALIGNMENT == 0
 #  define MM_ALIGN       (2 * sizeof(uintptr_t))
 #else
-#  define MM_ALIGN       CONFIG_MM_DEFAULT_ALIGNMENT
+#  define MM_ALIGN       CONFIG_MM_DFAULT_ALIGNMENT
 #endif
 #define MM_GRAN_MASK     (MM_ALIGN - 1)
 #define MM_ALIGN_UP(a)   (((a) + MM_GRAN_MASK) & ~MM_GRAN_MASK)
 #define MM_ALIGN_DOWN(a) ((a) & ~MM_GRAN_MASK)
 
-/* Due to alignment, the lowest two bits of valid chunk size are always
- * zero, thus the two bits are reused to depict allocation status: bit
- * 0 depicts the allocation state of current chunk, and bit 1 depicts that
- * of the physically preceding chunk.
+/* An allocated chunk is distinguished from a free chunk by bit 0
+ * of the 'preceding' chunk size.  If set, then this is an allocated chunk.
  */
 
 #define MM_ALLOC_BIT     0x1
@@ -171,11 +169,14 @@ typedef uint16_t mmsize_t;
 typedef size_t mmsize_t;
 #endif
 
-/* This describes an allocated chunk */
+/* This describes an allocated chunk.  An allocated chunk is
+ * distinguished from a free chunk by bit 15/31 of the 'preceding' chunk
+ * size.  If set, then this is an allocated chunk.
+ */
 
 struct mm_allocnode_s
 {
-  mmsize_t preceding;                       /* Physical preceding chunk size */
+  mmsize_t preceding;                       /* Size of the preceding chunk */
   mmsize_t size;                            /* Size of this chunk */
 #if CONFIG_MM_BACKTRACE >= 0
   pid_t pid;                                /* The pid for caller */
@@ -190,7 +191,7 @@ struct mm_allocnode_s
 
 struct mm_freenode_s
 {
-  mmsize_t preceding;                       /* Physical preceding chunk size */
+  mmsize_t preceding;                       /* Size of the preceding chunk */
   mmsize_t size;                            /* Size of this chunk */
 #if CONFIG_MM_BACKTRACE >= 0
   pid_t pid;                                /* The pid for caller */
@@ -219,7 +220,9 @@ struct mm_delaynode_s
 
 struct mm_heap_s
 {
-  /* Mutex for controling access to this heap */
+  /* Mutually exclusive access to this data set is enforced with
+   * the following un-named mutex.
+   */
 
   mutex_t mm_lock;
 
@@ -235,7 +238,7 @@ struct mm_heap_s
 
   size_t mm_curused;
 
-  /* The first and last allocated nodes of each region */
+  /* This is the first and last nodes of the heap */
 
   FAR struct mm_allocnode_s *mm_heapstart[CONFIG_MM_REGIONS];
   FAR struct mm_allocnode_s *mm_heapend[CONFIG_MM_REGIONS];
@@ -246,12 +249,14 @@ struct mm_heap_s
 
   /* All free nodes are maintained in a doubly linked list.  This
    * array provides some hooks into the list at various points to
-   * speed up searching of free nodes.
+   * speed searches for free nodes.
    */
 
   struct mm_freenode_s mm_nodelist[MM_NNODES];
 
-  /* Free delay list, as sometimes we can't do free immdiately. */
+  /* Free delay list, for some situations where we can't do free
+   * immdiately.
+   */
 
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
 

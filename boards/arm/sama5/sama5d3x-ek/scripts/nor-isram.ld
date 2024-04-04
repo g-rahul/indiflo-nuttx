@@ -92,22 +92,6 @@ SECTIONS
 
     _eronly = LOADADDR(.data);
 
-    .ramfunc ALIGN(4):
-    {
-        _sramfuncs = ABSOLUTE(.);
-        *(.ramfunc  .ramfunc.*)
-        _eramfuncs = ABSOLUTE(.);
-    } > isram AT > norflash
-
-    /* Uninitialized data */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-    } > isram
-
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -118,7 +102,23 @@ SECTIONS
         _ebss = ABSOLUTE(.);
     } > isram
 
+    .ramfunc ALIGN(4):
+    {
+        _sramfuncs = ABSOLUTE(.);
+        *(.ramfunc  .ramfunc.*)
+        _eramfuncs = ABSOLUTE(.);
+    } > isram AT > norflash
+
      _framfuncs = LOADADDR(.ramfunc);
+
+    /* Uninitialized data */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
+    } > isram
 
     /* Stabs debugging sections. */
 

@@ -219,7 +219,6 @@
 
 #define IEEE802154_MAX_PHY_PACKET_SIZE        127
 #define IEEE802154_TURN_AROUND_TIME           12 /* symbol periods*/
-#define IEEE802154_SYMBOL_US                  16 /* 16us */
 
 /* IEEE 802.15.4 MAC constants */
 
@@ -252,11 +251,6 @@
 #define IEEE802154_MAX_SIFS_FRAME_SIZE        18
 #define IEEE802154_MIN_CAP_LENGTH             440
 #define IEEE802154_UNIT_BACKOFF_PERIOD        20
-#define IEEE802154_LIFS_SYMBOLS               40
-#define IEEE802154_SIFS_SYMBOLS               12
-#define IEEE802154_ACKIFS_SYMBOLS             12
-#define IEEE802154_TIMESLOT_US                (16 * 60)
-#define IEEE802154_ACK_FRAME_SIZE             5  /* ACK length (FCF + Seq + FCS) */
 
 /* IEEE 802.15.4 MAC PIB Attribute Defaults */
 
@@ -387,7 +381,6 @@ enum ieee802154_attr_e
   IEEE802154_ATTR_PHY_SYMBOL_DURATION,
   IEEE802154_ATTR_PHY_FCS_LEN,
   IEEE802154_ATTR_PHY_REGDUMP,
-  IEEE802154_ATTR_PHY_TRACEDUMP,
 
   /* MAC PIB Attributes */
 

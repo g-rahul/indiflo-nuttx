@@ -22,8 +22,7 @@ Booting
 Create a file, 'boot.json' in the Nuttx root directory, with the following content::
 
   {
-    "nuttx.bin": "0x40000000",
-    "board.dtb": "0x41ec0000"
+    "nuttx.bin": "0x40000000"
   }
 
 Load the application over serial with::

@@ -20,6 +20,6 @@
 
 # Include POSIX message queue support
 
-if(CONFIG_FS_SHMFS)
+if(CONFIG_FS_SHM)
   target_sources(fs PRIVATE shm_open.c shm_unlink.c shmfs.c shmfs_alloc.c)
 endif()

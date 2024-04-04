@@ -496,7 +496,7 @@ static int elf_relocateadd(FAR struct elf_loadinfo_s *loadinfo, int relidx,
 
               if (ret == -ESRCH)
                 {
-                  bwarn("Section %d reloc %d: "
+                  berr("Section %d reloc %d: "
                        "Undefined symbol[%d] has no name: %d\n",
                        relidx, i, symidx, ret);
                 }

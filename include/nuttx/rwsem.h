@@ -25,8 +25,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/semaphore.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Public Type Definitions
@@ -34,11 +33,11 @@
 
 typedef struct
 {
-  spinlock_t protected;
-  sem_t   waiting;
-  int     waiter;
-  int     writer;
-  int     reader;
+  mutex_t protected; /* Protecting Locks for Read/Write Locked Tables */
+  sem_t   waiting;   /* Reader/writer Waiting queue */
+  int     waiter;    /* Waiter Count */
+  int     writer;    /* Writer Count */
+  int     reader;    /* Reader Count */
 } rw_semaphore_t;
 
 /****************************************************************************

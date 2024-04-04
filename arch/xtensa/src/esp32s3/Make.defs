@@ -30,6 +30,7 @@ CHIP_CSRCS  = esp32s3_irq.c esp32s3_clockconfig.c esp32s3_region.c
 CHIP_CSRCS += esp32s3_systemreset.c esp32s3_user.c esp32s3_allocateheap.c
 CHIP_CSRCS += esp32s3_wdt.c esp32s3_gpio.c esp32s3_lowputc.c esp32s3_serial.c
 CHIP_CSRCS += esp32s3_rtc_gpio.c esp32s3_libc_stubs.c esp32s3_spi_timing.c
+CHIP_CSRCS += esp32s3_periph.c
 
 # Configuration-dependent ESP32-S3 files
 
@@ -182,10 +183,6 @@ ifeq ($(CONFIG_ESP32S3_LCD),y)
 CHIP_CSRCS += esp32s3_lcd.c
 endif
 
-ifeq ($(CONFIG_ESP32S3_AES_ACCELERATOR),y)
-CHIP_CSRCS += esp32s3_aes.c
-endif
-
 #############################################################################
 # Espressif HAL for 3rd Party Platforms
 #############################################################################
@@ -194,7 +191,7 @@ endif
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = 966f1bbf7d80d3fac9a43f414e864985cbcfd680
+	ESP_HAL_3RDPARTY_VERSION = 22804823777dbbb7f43925b7729b3a32331aa7cd
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL
@@ -210,7 +207,6 @@ chip/$(ESP_HAL_3RDPARTY_REPO):
 # Silent preprocessor warnings
 
 CFLAGS += -Wno-undef -Wno-unused-variable
-CFLAGS += ${DEFINE_PREFIX}_RETARGETABLE_LOCKING
 
 # Files that require the HAL recipe
 

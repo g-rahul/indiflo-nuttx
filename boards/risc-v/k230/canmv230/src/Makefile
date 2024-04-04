@@ -1,5 +1,5 @@
 ############################################################################
-# boards/risc-v/k230/canmv230/src/Makefile
+# boards/risc-v/k230/canmv-k230/src/Makefile
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -22,20 +22,6 @@ include $(TOPDIR)/Make.defs
 
 RCSRCS = etc/init.d/rc.sysinit etc/init.d/rcS
 
-CSRCS = canmv_init.c 
-
-ifeq ($(CONFIG_BUILD_KERNEL),y)
-CSRCS += $(if $(wildcard romfs_boot.c), romfs_boot.c, romfs_stub.c)
-endif
+CSRCS = k230_appinit.c
 
 include $(TOPDIR)/boards/Board.mk
-
-# don't use single-colon targets as they may coflict with those included ones.
-# use double-colon targets to avoid collisions below.
-
-ifeq ($(CONFIG_BUILD_KERNEL),y)
-.PHONY: clean
-clean::
-	$(call DELFILE, romfs_boot.c)
-endif
-

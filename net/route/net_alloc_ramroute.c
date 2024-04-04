@@ -159,11 +159,6 @@ FAR struct net_route_ipv4_s *net_allocroute_ipv4(void)
   route = ramroute_ipv4_remfirst(&g_free_ipv4routes);
 
   net_unlock();
-  if (!route)
-    {
-      return NULL;
-    }
-
   return &route->entry;
 }
 #endif
@@ -182,11 +177,6 @@ FAR struct net_route_ipv6_s *net_allocroute_ipv6(void)
   route = ramroute_ipv6_remfirst(&g_free_ipv6routes);
 
   net_unlock();
-  if (!route)
-    {
-      return NULL;
-    }
-
   return &route->entry;
 }
 #endif

@@ -118,7 +118,6 @@
  */
 
 	.text
-	.section    .text.exception_common
 	.thumb_func
 	.type	exception_common, function
 exception_common:

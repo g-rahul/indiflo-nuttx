@@ -31,7 +31,7 @@
 
 #include "arm_internal.h"
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -77,4 +77,4 @@ void arm_pginitialize(void)
    */
 }
 
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */

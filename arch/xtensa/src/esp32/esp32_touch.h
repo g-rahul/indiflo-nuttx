@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "hardware/esp32_touch.h"
+#include "esp32_touch_lowerhalf.h"
 
 /****************************************************************************
  * Pre-processor Definitions

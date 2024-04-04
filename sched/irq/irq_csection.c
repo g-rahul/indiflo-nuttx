@@ -192,7 +192,7 @@ try_again:
    * lists are valid.
    */
 
-  if (nxsched_get_initstate() >= OSINIT_TASKLISTS)
+  if (g_nx_initstate >= OSINIT_TASKLISTS)
     {
       /* If called from an interrupt handler, then just take the spinlock.
        * If we are already in a critical section, this will lock the CPU
@@ -252,8 +252,6 @@ try_again:
 
           else
             {
-              int paused = false;
-
               /* Make sure that the g_cpu_irqset was not already set
                * by previous logic on this CPU that was executed by the
                * interrupt handler.  We know that the bit in g_cpu_irqset
@@ -275,13 +273,7 @@ try_again_in_irq:
                        * handling the pause request now.
                        */
 
-                      if (!paused)
-                        {
-                          up_cpu_paused_save();
-                        }
-
                       DEBUGVERIFY(up_cpu_paused(cpu));
-                      paused = true;
 
                       /* NOTE: As the result of up_cpu_paused(cpu), this CPU
                        * might set g_cpu_irqset in nxsched_resume_scheduler()
@@ -313,10 +305,6 @@ try_again_in_irq:
 
               spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
                           &g_cpu_irqlock);
-              if (paused)
-                {
-                  up_cpu_paused_restore();
-                }
             }
         }
       else
@@ -416,7 +404,7 @@ irqstate_t enter_critical_section(void)
    * lists have been initialized.
    */
 
-  if (!up_interrupt_context() && nxsched_get_initstate() >= OSINIT_TASKLISTS)
+  if (!up_interrupt_context() && g_nx_initstate >= OSINIT_TASKLISTS)
     {
       FAR struct tcb_s *rtcb = this_task();
       DEBUGASSERT(rtcb != NULL);
@@ -463,7 +451,7 @@ void leave_critical_section(irqstate_t flags)
    * lists are valid.
    */
 
-  if (nxsched_get_initstate() >= OSINIT_TASKLISTS)
+  if (g_nx_initstate >= OSINIT_TASKLISTS)
     {
       /* If called from an interrupt handler, then just release the
        * spinlock.  The interrupt handling logic should already hold the
@@ -563,7 +551,7 @@ void leave_critical_section(irqstate_t flags)
                    * section then.
                    */
 
-                  if (list_pendingtasks()->head != NULL &&
+                  if (g_pendingtasks.head != NULL &&
                       !nxsched_islocked_global())
                     {
                       /* Release any ready-to-run tasks that have collected
@@ -608,7 +596,7 @@ void leave_critical_section(irqstate_t flags)
    * lists have been initialized.
    */
 
-  if (!up_interrupt_context() && nxsched_get_initstate() >= OSINIT_TASKLISTS)
+  if (!up_interrupt_context() && g_nx_initstate >= OSINIT_TASKLISTS)
     {
       FAR struct tcb_s *rtcb = this_task();
       DEBUGASSERT(rtcb != NULL);
@@ -667,7 +655,7 @@ bool irq_cpu_locked(int cpu)
 
   /* g_cpu_irqset is not valid in early phases of initialization */
 
-  if (nxsched_get_initstate() < OSINIT_OSREADY)
+  if (g_nx_initstate < OSINIT_OSREADY)
     {
       /* We are still single threaded.  In either state of g_cpu_irqlock,
        * the correct return value should always be false.

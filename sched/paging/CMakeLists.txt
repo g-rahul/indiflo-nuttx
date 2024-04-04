@@ -18,7 +18,7 @@
 #
 # ##############################################################################
 
-if(CONFIG_LEGACY_PAGING)
+if(CONFIG_PAGING)
 
   target_sources(sched PRIVATE pg_miss.c pg_worker.c)
 

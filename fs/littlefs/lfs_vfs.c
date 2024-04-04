@@ -29,7 +29,6 @@
 #include <string.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mutex.h>
@@ -37,7 +36,6 @@
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
-#include "inode/inode.h"
 #include "littlefs/lfs.h"
 #include "littlefs/lfs_util.h"
 
@@ -545,68 +543,30 @@ static off_t littlefs_seek(FAR struct file *filep, off_t offset, int whence)
 static int littlefs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct littlefs_mountpt_s *fs;
-  FAR struct littlefs_file_s *priv;
   FAR struct inode *inode;
   FAR struct inode *drv;
-  int ret;
 
   /* Recover our private data from the struct file instance */
 
-  priv  = filep->f_priv;
   inode = filep->f_inode;
   fs    = inode->i_private;
   drv   = fs->drv;
 
-  ret = nxmutex_lock(&fs->lock);
-  if (ret < 0)
+  if (INODE_IS_MTD(drv))
     {
-      return ret;
+      return MTD_IOCTL(drv->u.i_mtd, cmd, arg);
     }
-
-  switch (cmd)
+  else
     {
-      case FIOC_FILEPATH:
+      if (drv->u.i_bops->ioctl != NULL)
         {
-          FAR char *path = (FAR char *)(uintptr_t)arg;
-          ret = inode_getpath(inode, path, PATH_MAX);
-          if (ret >= 0)
-            {
-              size_t len = strlen(path);
-              if (path[len - 1] != '/')
-                {
-                  path[len++] = '/';
-                }
-
-              ret = littlefs_convert_result(lfs_file_path(&fs->lfs,
-                                                          &priv->file,
-                                                          path + len,
-                                                          PATH_MAX - len));
-            }
+          return drv->u.i_bops->ioctl(drv, cmd, arg);
         }
-        break;
-
-      default:
+      else
         {
-          if (INODE_IS_MTD(drv))
-            {
-              ret = MTD_IOCTL(drv->u.i_mtd, cmd, arg);
-            }
-          else
-            {
-              if (drv->u.i_bops->ioctl != NULL)
-                {
-                  ret = drv->u.i_bops->ioctl(drv, cmd, arg);
-                }
-              else
-                {
-                  ret = -ENOTTY;
-                }
-            }
+          return -ENOTTY;
         }
     }
-
-  nxmutex_unlock(&fs->lock);
-  return ret;
 }
 
 /****************************************************************************

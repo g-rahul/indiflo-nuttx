@@ -21,10 +21,6 @@
 #ifndef ___ARCH_RISC_V_SRC_COMMON_RISCV_MMU_H_
 #define ___ARCH_RISC_V_SRC_COMMON_RISCV_MMU_H_
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
 /* RV32/64 page size */
 
 #define RV_MMU_PAGE_SHIFT       (12)
@@ -155,16 +151,6 @@
 extern uintptr_t g_kernel_pgt_pbase;
 
 /****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-void weak_function mmu_flush_cache(uintptr_t);
-
-/****************************************************************************
- * Inline Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: mmu_satp_reg
  *
  * Description:
@@ -211,13 +197,6 @@ static inline void mmu_write_satp(uintptr_t reg)
       : "rK" (reg)
       : "memory"
     );
-
-  /* Flush the MMU Cache if needed (T-Head C906) */
-
-  if (mmu_flush_cache != NULL)
-    {
-      mmu_flush_cache(reg);
-    }
 }
 
 /****************************************************************************

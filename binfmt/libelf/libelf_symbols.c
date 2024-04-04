@@ -76,7 +76,7 @@ static int elf_symname(FAR struct elf_loadinfo_s *loadinfo,
 
   if (sym->st_name == 0)
     {
-      bwarn("Symbol has no name\n");
+      berr("Symbol has no name\n");
       return -ESRCH;
     }
 
@@ -292,7 +292,7 @@ int elf_symvalue(FAR struct elf_loadinfo_s *loadinfo, FAR Elf_Sym *sym,
              * indicate the nameless symbol.
              */
 
-            bwarn("SHN_UNDEF: Failed to get symbol name: %d\n", ret);
+            berr("SHN_UNDEF: Failed to get symbol name: %d\n", ret);
             return ret;
           }
 

@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/nuttx.h>
 #include <sys/types.h>
 #include <stdbool.h>
 #include <pthread.h>
@@ -35,6 +34,133 @@
 #include "sched/sched.h"
 #include "group/group.h"
 #include "pthread/pthread.h"
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: pthread_notifywaiters
+ *
+ * Description:
+ *   Notify all other threads waiting in phread join for this thread's
+ *   exit data.  This must  be done by the child at child thread
+ *   destruction time.
+ *
+ ****************************************************************************/
+
+static bool pthread_notifywaiters(FAR struct join_s *pjoin)
+{
+  int ntasks_waiting;
+  int status;
+
+  sinfo("pjoin=%p\n", pjoin);
+
+  /* Are any tasks waiting for our exit value? */
+
+  status = nxsem_get_value(&pjoin->exit_sem, &ntasks_waiting);
+  if (status == OK && ntasks_waiting < 0)
+    {
+      /* Set the data semaphore so that this thread will be
+       * awakened when all waiting tasks receive the data
+       */
+
+      nxsem_init(&pjoin->data_sem, 0, (ntasks_waiting + 1));
+
+      /* Post the semaphore to restart each thread that is waiting
+       * on the semaphore
+       */
+
+      do
+        {
+          status = pthread_sem_give(&pjoin->exit_sem);
+          if (status == OK)
+            {
+              status = nxsem_get_value(&pjoin->exit_sem, &ntasks_waiting);
+            }
+        }
+      while (ntasks_waiting < 0 && status == OK);
+
+      /* Now wait for all these restarted tasks to obtain the return
+       * value.
+       */
+
+      nxsem_wait_uninterruptible(&pjoin->data_sem);
+      return true;
+    }
+
+  return false;
+}
+
+/****************************************************************************
+ * Name: pthread_removejoininfo
+ *
+ * Description:
+ *   Remove a join structure from the local data set.
+ *
+ * Input Parameters:
+ *   pid
+ *
+ * Returned Value:
+ *   None.
+ *
+ * Assumptions:
+ *   The caller has provided protection from re-entrancy.
+ *
+ ****************************************************************************/
+
+static void pthread_removejoininfo(FAR struct task_group_s *group,
+                                   pid_t pid)
+{
+  FAR struct join_s *prev;
+  FAR struct join_s *join;
+
+  /* Find the entry with the matching pid */
+
+  for (prev = NULL, join = group->tg_joinhead;
+       (join && (pid_t)join->thread != pid);
+       prev = join, join = join->next);
+
+  /* Remove it from the data set. */
+
+  /* First check if this is the entry at the head of the list. */
+
+  if (join)
+    {
+      if (!prev)
+        {
+          /* Check if this is the only entry in the list */
+
+          if (!join->next)
+            {
+              group->tg_joinhead = NULL;
+              group->tg_jointail = NULL;
+            }
+
+          /* Otherwise, remove it from the head of the list */
+
+          else
+            {
+              group->tg_joinhead = join->next;
+            }
+        }
+
+      /* It is not at the head of the list, check if it is at the tail. */
+
+      else if (!join->next)
+        {
+          group->tg_jointail = prev;
+          prev->next = NULL;
+        }
+
+      /* No, remove it from the middle of the list. */
+
+      else
+        {
+          prev->next = join->next;
+        }
+    }
+}
 
 /****************************************************************************
  * Public Functions
@@ -63,53 +189,59 @@
 int pthread_completejoin(pid_t pid, FAR void *exit_value)
 {
   FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
-  FAR struct task_group_s *group = tcb->group;
-  FAR struct task_join_s *join;
-  FAR struct tcb_s *wtcb;
-  FAR sq_entry_t *curr;
-  FAR sq_entry_t *next;
-  int ret = OK;
+  FAR struct task_group_s *group = tcb ? tcb->group : NULL;
+  FAR struct join_s *pjoin;
+  int ret;
 
-  sinfo("pid=%d exit_value=%p\n", pid, exit_value);
+  sinfo("pid=%d exit_value=%p group=%p\n", pid, exit_value, group);
+  DEBUGASSERT(group && tcb);
 
-  nxrmutex_lock(&group->tg_joinlock);
+  /* First, find thread's structure in the private data set. */
 
-  if (!sq_empty(&tcb->join_queue))
+  nxmutex_lock(&group->tg_joinlock);
+  ret = pthread_findjoininfo(group, pid, &pjoin);
+  if (ret != OK)
     {
-      sq_for_every_safe(&tcb->join_queue, curr, next)
-        {
-          /* Remove join entry from queue */
+      nxmutex_unlock(&group->tg_joinlock);
 
-          sq_rem(curr, &tcb->join_queue);
-
-          /* Get tcb entry which waiting for the join */
-
-          wtcb = container_of(curr, struct tcb_s, join_entry);
-
-          /* Save the return exit value in the thread structure. */
-
-          wtcb->join_val = exit_value;
-
-          /* Notify waiters of the availability of the exit value */
-
-          nxsem_post(&wtcb->join_sem);
-        }
+      return ((tcb->flags & TCB_FLAG_DETACHED) ||
+              (tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_PTHREAD) ?
+              OK : ERROR;
     }
-  else if (!sq_is_singular(&tcb->group->tg_members))
+  else
     {
-      ret = pthread_findjoininfo(tcb->group, pid, &join, true);
-      if (ret == OK)
+      FAR struct pthread_tcb_s *ptcb = (FAR struct pthread_tcb_s *)tcb;
+      bool waiters;
+
+      /* Save the return exit value in the thread structure. */
+
+      pjoin->terminated = true;
+      pjoin->exit_value = exit_value;
+      ptcb->join_complete = true;
+
+      /* Notify waiters of the availability of the exit value */
+
+      waiters = pthread_notifywaiters(pjoin);
+
+      /* If there are no waiters and if the thread is marked as detached.
+       * then discard the join information now.  Otherwise, the pthread
+       * join logic will call pthread_destroyjoin() when all of the threads
+       * have sampled the exit value.
+       */
+
+      if (!waiters && pjoin->detached)
         {
-          join->detached = !!(tcb->flags & TCB_FLAG_DETACHED);
-          join->exit_value = exit_value;
+          pthread_destroyjoin(group, pjoin);
         }
+
+      /* Giving the following semaphore will allow the waiters
+       * to call pthread_destroyjoin.
+       */
+
+      nxmutex_unlock(&group->tg_joinlock);
     }
 
-  tcb->flags |= TCB_FLAG_JOIN_COMPLETED;
-
-  nxrmutex_unlock(&group->tg_joinlock);
-
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -129,15 +261,18 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
  ****************************************************************************/
 
 void pthread_destroyjoin(FAR struct task_group_s *group,
-                         FAR struct task_join_s *pjoin)
+                         FAR struct join_s *pjoin)
 {
   sinfo("pjoin=%p\n", pjoin);
 
   /* Remove the join info from the set of joins */
 
-  nxrmutex_lock(&group->tg_joinlock);
-  sq_rem(&pjoin->entry, &group->tg_joinqueue);
-  nxrmutex_unlock(&group->tg_joinlock);
+  pthread_removejoininfo(group, (pid_t)pjoin->thread);
+
+  /* Destroy its semaphores */
+
+  nxsem_destroy(&pjoin->data_sem);
+  nxsem_destroy(&pjoin->exit_sem);
 
   /* And deallocate the pjoin structure */
 

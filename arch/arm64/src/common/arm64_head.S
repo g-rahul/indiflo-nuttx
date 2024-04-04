@@ -89,8 +89,6 @@ label:  .asciz msg;                             \
      * This must be the very first address in the loaded image.
      * It should be loaded at any 4K-aligned address.
      */
-
-    .section .start, "ax"
     .globl __start;
 __start:
 

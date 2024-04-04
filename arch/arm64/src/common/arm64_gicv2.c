@@ -647,7 +647,7 @@ static inline unsigned int arm_gic_nlines(void)
   return (field + 1) << 5;
 }
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 /****************************************************************************
  * Name: up_set_secure_irq
  *

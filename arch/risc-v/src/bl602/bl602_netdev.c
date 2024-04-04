@@ -32,7 +32,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <sched.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/nuttx.h>

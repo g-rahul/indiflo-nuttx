@@ -81,9 +81,6 @@
 
 #define NVS_SPECIAL_ATE_ID              0xffffffff
 
-#define NVS_ALIGN_SIZE                  CONFIG_MTD_WRITE_ALIGN_SIZE
-#define NVS_ALIGN_UP(x)                 (((x) + NVS_ALIGN_SIZE - 1) & ~(NVS_ALIGN_SIZE - 1))
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -113,15 +110,8 @@ begin_packed_struct struct nvs_ate
   uint16_t key_len;      /* Key string len */
   uint8_t  part;         /* Part of a multipart data - future extension */
   uint8_t  crc8;         /* Crc8 check of the ate entry */
-#if CONFIG_MTD_WRITE_ALIGN_SIZE <= 4
-  /* stay compatible with situation which align byte be 1 */
-
-  uint8_t  expired[NVS_ALIGN_SIZE];
-  uint8_t  reserved[4 - NVS_ALIGN_SIZE];
-#else
-  uint8_t  padding[NVS_ALIGN_UP(12) - 12];
-  uint8_t  expired[NVS_ALIGN_SIZE];
-#endif
+  uint8_t  expired;      /* 0xFF-newest entry, others-old entry */
+  uint8_t  reserved[3];  /* For future extension */
 } end_packed_struct;
 
 /****************************************************************************
@@ -588,40 +578,6 @@ static int nvs_close_ate_valid(FAR struct nvs_fs *fs,
 }
 
 /****************************************************************************
- * Name: nvs_flash_write_multi_blk
- *
- * Description:
- *   Store multi align block in flash
- *
- * Returned Value:
- *   number of bytes at the end of addr which is left to write next time.
- *   zero indicates all bytes were written . On error returns -ERRNO code.
- ****************************************************************************/
-
-int nvs_flash_write_multi_blk(FAR struct nvs_fs *fs, const uint8_t *addr,
-                              size_t size)
-{
-  size_t blk_cnt;
-  int left;
-  int rc;
-
-  blk_cnt = size / NVS_ALIGN_SIZE;
-  left    = size % NVS_ALIGN_SIZE;
-
-  if (blk_cnt)
-    {
-      rc = nvs_flash_data_wrt(fs, addr, size - left);
-      if (rc)
-        {
-          ferr("Write multi data value failed, rc=%d\n", rc);
-          return rc;
-        }
-    }
-
-  return left;
-}
-
-/****************************************************************************
  * Name: nvs_flash_wrt_entry
  *
  * Description:
@@ -635,9 +591,6 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
 {
   int rc;
   struct nvs_ate entry;
-  uint16_t left;
-  uint16_t copy_len = 0;
-  uint8_t buf[NVS_ALIGN_SIZE];
 
   memset(&entry, fs->erasestate, sizeof(entry));
   entry.id = id;
@@ -647,57 +600,21 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
 
   nvs_ate_crc8_update(&entry);
 
-  /* Let's save key and data into one, key comes first, then data */
+  /* Let's sew key and data into one, key comes first, then data */
 
-  rc = nvs_flash_write_multi_blk(fs, key, key_size);
-  if (rc < 0)
+  rc = nvs_flash_data_wrt(fs, key, key_size);
+  if (rc)
     {
+      ferr("Write key failed, rc=%d\n", rc);
       return rc;
     }
 
+  rc = nvs_flash_data_wrt(fs, data, len);
   if (rc)
     {
-      /* Write align block which inlcude part key + part data */
-
-      left = rc;
-      memset(buf, fs->erasestate, NVS_ALIGN_SIZE);
-
-      copy_len = (left + len) <= NVS_ALIGN_SIZE ?
-                  len : (NVS_ALIGN_SIZE - left);
-
-      memcpy(buf, key + key_size - left, left);
-      memcpy(buf + left, data, copy_len);
-      rc = nvs_flash_data_wrt(fs, buf, NVS_ALIGN_SIZE);
-      if (rc)
-        {
-          ferr("Write value failed, rc=%d\n", rc);
-          return rc;
-        }
-    }
-
-  rc = nvs_flash_write_multi_blk(fs, data + copy_len,  len - copy_len);
-  if (rc < 0)
-    {
+      ferr("Write value failed, rc=%d\n", rc);
       return rc;
     }
-
-  if (rc)
-    {
-      /* Add padding at the end of data */
-
-      left = rc;
-      memset(buf, fs->erasestate, NVS_ALIGN_SIZE);
-      memcpy(buf, data + len - left, left);
-
-      rc = nvs_flash_data_wrt(fs, buf, NVS_ALIGN_SIZE);
-      if (rc)
-        {
-          ferr("Write value failed, rc=%d\n", rc);
-          return rc;
-        }
-    }
-
-  /* Last, let's save entry to flash */
 
   rc = nvs_flash_ate_wrt(fs, &entry);
   if (rc)
@@ -749,14 +666,8 @@ static int nvs_recover_last_ate(FAR struct nvs_fs *fs,
           /* Found a valid ate, update data_end_addr and *addr */
 
           data_end_addr &= ADDR_BLOCK_MASK;
-          data_end_addr += end_ate.offset +
-                           NVS_ALIGN_UP(end_ate.key_len + end_ate.len);
+          data_end_addr += end_ate.offset + end_ate.key_len + end_ate.len;
           *addr = ate_end_addr;
-        }
-
-      if (ate_end_addr < sizeof(struct nvs_ate))
-        {
-          break;
         }
 
       ate_end_addr -= sizeof(struct nvs_ate);
@@ -918,11 +829,10 @@ static int nvs_add_gc_done_ate(FAR struct nvs_fs *fs)
 
 static int nvs_expire_ate(FAR struct nvs_fs *fs, uint32_t addr)
 {
-  uint8_t expired[NVS_ALIGN_SIZE];
-  memset(expired, ~fs->erasestate, sizeof(expired));
+  uint8_t expired = 0;
 
   return nvs_flash_wrt(fs, addr + offsetof(struct nvs_ate, expired),
-                       expired, sizeof(expired));
+                       &expired, sizeof(expired));
 }
 
 /****************************************************************************
@@ -996,7 +906,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
           return rc;
         }
 
-      if (gc_ate.expired[0] != fs->erasestate)
+      if (gc_ate.expired != fs->erasestate)
         {
           /* Deleted or old ate, ignore it */
 
@@ -1022,7 +932,7 @@ static int nvs_gc(FAR struct nvs_fs *fs)
           nvs_ate_crc8_update(&gc_ate);
 
           rc = nvs_flash_block_move(fs, data_addr,
-                            NVS_ALIGN_UP(gc_ate.key_len + gc_ate.len));
+                                    gc_ate.key_len + gc_ate.len);
           if (rc)
             {
               return rc;
@@ -1207,8 +1117,8 @@ static int nvs_startup(FAR struct nvs_fs *fs)
           /* Complete write of ate was performed */
 
           fs->data_wra = addr & ADDR_BLOCK_MASK;
-          fs->data_wra += last_ate.offset +
-                          NVS_ALIGN_UP(last_ate.key_len + last_ate.len);
+          fs->data_wra += last_ate.offset + last_ate.key_len +
+            last_ate.len;
           finfo("recovered data_wra=0x%" PRIx32 "\n", fs->data_wra);
         }
 
@@ -1367,7 +1277,7 @@ static int nvs_startup(FAR struct nvs_fs *fs)
 
               if (nvs_ate_valid(fs, &second_ate)
                   && second_ate.id == last_ate.id
-                  && second_ate.expired[0] == fs->erasestate)
+                  && second_ate.expired == fs->erasestate)
                 {
                   finfo("same id at 0x%" PRIx32 ", key_len %" PRIu16 ", "
                         "offset %" PRIu16 "\n",
@@ -1483,7 +1393,7 @@ static ssize_t nvs_read_entry(FAR struct nvs_fs *fs, FAR const uint8_t *key,
             {
               /* It is old or deleted, return -ENOENT */
 
-              if (wlk_ate.expired[0] != fs->erasestate)
+              if (wlk_ate.expired != fs->erasestate)
                 {
                   return -ENOENT;
                 }
@@ -1572,14 +1482,13 @@ static ssize_t nvs_write(FAR struct nvs_fs *fs,
 
   /* Data now contains input data and input key, input key first. */
 
-  data_size = NVS_ALIGN_UP(key_size + pdata->len);
+  data_size = key_size + pdata->len;
 
   /* The maximum data size is block size - 3 ate
    * where: 1 ate for data, 1 ate for block close, 1 ate for gc done.
    */
 
-  finfo("key_size=%zu, len=%zu, data_size = %zu\n", key_size,
-                                                    pdata->len, data_size);
+  finfo("key_size=%zu, len=%zu\n", key_size, pdata->len);
 
   if ((data_size > (fs->geo.erasesize - 3 * sizeof(struct nvs_ate))) ||
       ((pdata->len > 0) && (pdata->configdata == NULL)))
@@ -1639,7 +1548,7 @@ static ssize_t nvs_write(FAR struct nvs_fs *fs,
         {
           /* If prev ate is expired, it is deleted. */
 
-          if (wlk_ate.expired[0] != fs->erasestate)
+          if (wlk_ate.expired != fs->erasestate)
             {
               /* Skip delete entry as it is already the
                * last one.
@@ -1663,7 +1572,7 @@ static ssize_t nvs_write(FAR struct nvs_fs *fs,
             }
         }
       else if (pdata->len == wlk_ate.len &&
-               wlk_ate.expired[0] == fs->erasestate)
+               wlk_ate.expired == fs->erasestate)
         {
           /* Do not try to compare if lengths are not equal
            * or prev one is deleted.
@@ -1710,7 +1619,7 @@ static ssize_t nvs_write(FAR struct nvs_fs *fs,
           /* Nvs is changed after gc, we will look for the old ate.
            */
 
-          if (prev_found && wlk_ate.expired[0] == fs->erasestate)
+          if (prev_found && wlk_ate.expired == fs->erasestate)
             {
               finfo("prev entry exists, search for it\n");
 
@@ -1753,7 +1662,7 @@ static ssize_t nvs_write(FAR struct nvs_fs *fs,
            * already expired)
            */
 
-          if (prev_found && wlk_ate.expired[0] == fs->erasestate)
+          if (prev_found && wlk_ate.expired == fs->erasestate)
             {
               rc = nvs_expire_ate(fs, hist_addr);
               finfo("expir prev entry, %" PRIx32 ", rc %d\n",
@@ -1923,7 +1832,7 @@ static int nvs_next(FAR struct nvs_fs *fs,
 
       if (nvs_ate_valid(fs, &step_ate)
           && step_ate.id != NVS_SPECIAL_ATE_ID
-          && step_ate.expired[0] == fs->erasestate)
+          && step_ate.expired == fs->erasestate)
         {
           break;
         }

@@ -66,7 +66,6 @@ FAR void *lib_obstack_malloc(size_t size)
 
   obstack_alloc_failed_handler();
   PANIC();
-  return NULL;
 }
 
 FAR void *lib_obstack_realloc(FAR void *ptr, size_t size)
@@ -80,5 +79,4 @@ FAR void *lib_obstack_realloc(FAR void *ptr, size_t size)
 
   obstack_alloc_failed_handler();
   PANIC();
-  return NULL;
 }

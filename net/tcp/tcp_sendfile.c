@@ -417,7 +417,7 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
   FAR struct tcp_conn_s *conn;
   struct sendfile_s state;
   off_t startpos;
-  int ret = OK;
+  int ret;
 
   conn = psock->s_conn;
   DEBUGASSERT(conn != NULL);
@@ -434,16 +434,19 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
 
 #if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
 #ifdef CONFIG_NET_ARP_SEND
+#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
   if (psock->s_domain == PF_INET)
+#endif
     {
       /* Make sure that the IP address mapping is in the ARP table */
 
       ret = arp_send(conn->u.ipv4.raddr);
     }
 #endif /* CONFIG_NET_ARP_SEND */
-
 #ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-  if (psock->s_domain == PF_INET6)
+#ifdef CONFIG_NET_ARP_SEND
+  else
+#endif
     {
       /* Make sure that the IP address mapping is in the Neighbor Table */
 

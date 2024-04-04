@@ -34,7 +34,6 @@
 #include <string.h>
 
 #include <arch/board/board.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>

@@ -49,13 +49,8 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/include/arch)
 endif()
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/include_arch/arch/board)
-  if(EXISTS ${NUTTX_BOARD_DIR}/include)
-    nuttx_create_symlink(${NUTTX_BOARD_DIR}/include
-                         ${CMAKE_BINARY_DIR}/include_arch/arch/board)
-  elseif(EXISTS ${NUTTX_BOARD_DIR}/../common/include)
-    nuttx_create_symlink(${NUTTX_BOARD_DIR}/../common/include
-                         ${CMAKE_BINARY_DIR}/include_arch/arch/board)
-  endif()
+  nuttx_create_symlink(${NUTTX_BOARD_DIR}/include
+                       ${CMAKE_BINARY_DIR}/include_arch/arch/board)
 endif()
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/include_arch/arch/chip)

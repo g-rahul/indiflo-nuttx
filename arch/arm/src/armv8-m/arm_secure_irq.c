@@ -33,7 +33,7 @@
 #include "arm_internal.h"
 #include "nvic.h"
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 
 /****************************************************************************
  * Public Functions

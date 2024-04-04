@@ -402,20 +402,14 @@ int  arm_securefault(int irq, void *context, void *arg);
 
 #elif defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
 
-/* Interrupt acknowledge and dispatch */
-
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
-uint32_t *arm_dofiq(int fiq, uint32_t *regs);
-#endif
-
 /* Paging support */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
-#else /* CONFIG_LEGACY_PAGING */
+#else /* CONFIG_PAGING */
 #  define arm_pginitialize()
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
 
 /* Exception Handlers */
 
@@ -430,14 +424,14 @@ uint32_t *arm_undefinedinsn(uint32_t *regs);
 
 /* Paging support (and exception handlers) */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
 void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr);
-#else /* CONFIG_LEGACY_PAGING */
+#else /* CONFIG_PAGING */
 #  define arm_pginitialize()
 void arm_dataabort(uint32_t *regs);
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */
 
 /* Exception handlers */
 

@@ -33,7 +33,6 @@
 #include <string.h>
 #include <sys/types.h>
 
-#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
@@ -370,7 +369,10 @@ static void start_rt_timer(struct rt_timer_s *timer,
                            uint64_t timeout,
                            bool repeat)
 {
+  irqstate_t flags;
   struct esp32s3_rt_priv_s *priv = &g_rt_priv;
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Only idle timer can be started */
 
@@ -435,6 +437,8 @@ static void start_rt_timer(struct rt_timer_s *timer,
     {
       tmrwarn("Timer not in idle mode. Only idle timer can be started!\n");
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -454,7 +458,10 @@ static void start_rt_timer(struct rt_timer_s *timer,
 
 static void stop_rt_timer(struct rt_timer_s *timer)
 {
+  irqstate_t flags;
   struct esp32s3_rt_priv_s *priv = &g_rt_priv;
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* "start" function can set the timer's repeat flag, and "stop" function
    * should remove this flag.
@@ -500,6 +507,8 @@ static void stop_rt_timer(struct rt_timer_s *timer)
             }
         }
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -745,16 +754,9 @@ void esp32s3_rt_timer_start(struct rt_timer_s *timer,
                             uint64_t timeout,
                             bool repeat)
 {
-  irqstate_t flags;
-  struct esp32s3_rt_priv_s *priv = &g_rt_priv;
-
-  flags = spin_lock_irqsave(&priv->lock);
-
   stop_rt_timer(timer);
 
   start_rt_timer(timer, timeout, repeat);
-
-  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -773,12 +775,7 @@ void esp32s3_rt_timer_start(struct rt_timer_s *timer,
 
 void esp32s3_rt_timer_stop(struct rt_timer_s *timer)
 {
-  irqstate_t flags;
-  struct esp32s3_rt_priv_s *priv = &g_rt_priv;
-
-  flags = spin_lock_irqsave(&priv->lock);
   stop_rt_timer(timer);
-  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************

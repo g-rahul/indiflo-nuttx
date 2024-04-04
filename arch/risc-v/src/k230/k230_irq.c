@@ -35,8 +35,6 @@
 #include "riscv_internal.h"
 #include "chip.h"
 
-#define STATUS_LOW  (READ_CSR(CSR_STATUS) & 0xffffffff) /* STATUS low part */
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -71,8 +69,6 @@ void up_irqinitialize(void)
     {
       putreg32(1, (uintptr_t)(K230_PLIC_PRIORITY + 4 * id));
     }
-
-  sinfo("prioritized %d irqs\n", NR_IRQS);
 
   /* Set irq threshold to 0 (permits all global interrupts) */
 
@@ -118,7 +114,7 @@ void up_disable_irq(int irq)
     }
   else if (irq == RISCV_IRQ_TIMER)
     {
-      /* Disable timer interrupt in m/sie */
+      /* Read m/sstatus & clear timer interrupt enable in m/sie */
 
       CLEAR_CSR(CSR_IE, IE_TIE);
     }
@@ -128,7 +124,7 @@ void up_disable_irq(int irq)
 
       /* Clear enable bit for the irq */
 
-      if (0 <= extirq && extirq <= K230_PLIC_IRQS)
+      if (0 <= extirq && extirq <= 63)
         {
           modifyreg32(K230_PLIC_ENABLE1 + (4 * (extirq / 32)),
                       1 << (extirq % 32), 0);
@@ -138,8 +134,6 @@ void up_disable_irq(int irq)
           PANIC();
         }
     }
-
-  sinfo("ie=%lx sts=%lx irq=%d\n", READ_CSR(CSR_IE), STATUS_LOW, irq);
 }
 
 /****************************************************************************
@@ -162,17 +156,25 @@ void up_enable_irq(int irq)
     }
   else if (irq == RISCV_IRQ_TIMER)
     {
-      /* Enable timer interrupt in m/sie */
+      /* Read m/sstatus & set timer interrupt enable in m/sie */
 
       SET_CSR(CSR_IE, IE_TIE);
     }
+#ifdef CONFIG_BUILD_KERNEL
+  else if (irq == RISCV_IRQ_MTIMER)
+    {
+      /* Read m/sstatus & set timer interrupt enable in m/sie */
+
+      SET_CSR(mie, MIE_MTIE);
+    }
+#endif
   else if (irq > RISCV_IRQ_EXT)
     {
       extirq = irq - RISCV_IRQ_EXT;
 
-      /* Enable the irq in PLIC */
+      /* Set enable bit for the irq */
 
-      if (0 <= extirq && extirq < K230_PLIC_IRQS)
+      if (0 <= extirq && extirq <= 63)
         {
           modifyreg32(K230_PLIC_ENABLE1 + (4 * (extirq / 32)),
                       0, 1 << (extirq % 32));
@@ -182,8 +184,6 @@ void up_enable_irq(int irq)
           PANIC();
         }
     }
-
-  sinfo("ie=%lx sts=%lx irq=%d\n", READ_CSR(CSR_IE), STATUS_LOW, irq);
 }
 
 irqstate_t up_irq_enable(void)
@@ -197,8 +197,6 @@ irqstate_t up_irq_enable(void)
   /* Read and enable global interrupts (M/SIE) in m/sstatus */
 
   oldstat = READ_AND_SET_CSR(CSR_STATUS, STATUS_IE);
-  sinfo("ie=%lx sts=%lx ctx=%d\n", READ_CSR(CSR_IE), STATUS_LOW,
-        XCPTCONTEXT_SIZE);
 
   return oldstat;
 }

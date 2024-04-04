@@ -112,7 +112,7 @@ endif()
 
 target_sources(board PRIVATE ${SRCS})
 
-if(CONFIG_SOC_APP_FORMAT_MCUBOOT)
+if(CONFIG_STM32_APP_FORMAT_MCUBOOT)
   if(CONFIG_MCUBOOT_BOOTLOADER)
     set_property(GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/flash-mcuboot-loader.ld")
   else()

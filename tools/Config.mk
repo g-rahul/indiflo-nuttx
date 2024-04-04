@@ -578,11 +578,6 @@ ifeq ($(CONFIG_STACK_USAGE),y)
 	EXTRA += *.su
 endif
 
-ifeq ($(CONFIG_ARCH_TOOLCHAIN_TASKING),y)
-	EXTRA += *.d
-	EXTRA += *.src
-endif
-
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
 define CLEAN
 	$(Q) if exist *$(OBJEXT) (del /f /q *$(OBJEXT))
@@ -662,10 +657,6 @@ else
   ifeq ($(CONFIG_ETL),y)
     ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include$(DELIM)etl
   endif
-endif
-
-ifeq ($(CONFIG_LIBCXXABI),y)
-ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include$(DELIM)libcxxabi
 endif
 
 ifeq ($(CONFIG_LIBM_NEWLIB),y)

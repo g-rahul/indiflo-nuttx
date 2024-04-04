@@ -89,7 +89,7 @@ bool nxsched_merge_pending(void)
 
   if (rtcb->lockcount == 0)
     {
-      for (ptcb = (FAR struct tcb_s *)list_pendingtasks()->head;
+      for (ptcb = (FAR struct tcb_s *)g_pendingtasks.head;
            ptcb;
            ptcb = pnext)
         {
@@ -128,8 +128,7 @@ bool nxsched_merge_pending(void)
               ptcb->flink       = rtcb;
               ptcb->blink       = NULL;
               rtcb->blink       = ptcb;
-              list_readytorun()->head
-                                = (FAR dq_entry_t *)ptcb;
+              g_readytorun.head = (FAR dq_entry_t *)ptcb;
               rtcb->task_state  = TSTATE_TASK_READYTORUN;
               ptcb->task_state  = TSTATE_TASK_RUNNING;
               ret               = true;
@@ -152,8 +151,8 @@ bool nxsched_merge_pending(void)
 
       /* Mark the input list empty */
 
-      list_pendingtasks()->head = NULL;
-      list_pendingtasks()->tail = NULL;
+      g_pendingtasks.head = NULL;
+      g_pendingtasks.tail = NULL;
     }
 
   return ret;
@@ -203,7 +202,7 @@ bool nxsched_merge_pending(void)
     {
       /* Find the CPU that is executing the lowest priority task */
 
-      ptcb = (FAR struct tcb_s *)dq_peek(list_pendingtasks());
+      ptcb = (FAR struct tcb_s *)dq_peek(&g_pendingtasks);
       if (ptcb == NULL)
         {
           /* The pending task list is empty */
@@ -227,7 +226,7 @@ bool nxsched_merge_pending(void)
         {
           /* Remove the task from the pending task list */
 
-          tcb = (FAR struct tcb_s *)dq_remfirst(list_pendingtasks());
+          tcb = (FAR struct tcb_s *)dq_remfirst(&g_pendingtasks);
 
           /* Add the pending task to the correct ready-to-run list. */
 
@@ -244,8 +243,8 @@ bool nxsched_merge_pending(void)
                * move them back to the pending task list.
                */
 
-              nxsched_merge_prioritized(list_readytorun(),
-                                        list_pendingtasks(),
+              nxsched_merge_prioritized(&g_readytorun,
+                                        &g_pendingtasks,
                                         TSTATE_TASK_PENDING);
 
               /* And return with the scheduler locked and tasks in the
@@ -257,7 +256,7 @@ bool nxsched_merge_pending(void)
 
           /* Set up for the next time through the loop */
 
-          ptcb = (FAR struct tcb_s *)dq_peek(list_pendingtasks());
+          ptcb = (FAR struct tcb_s *)dq_peek(&g_pendingtasks);
           if (ptcb == NULL)
             {
               /* The pending task list is empty */
@@ -273,8 +272,8 @@ bool nxsched_merge_pending(void)
        * tasks in the pending task list to the ready-to-run task list.
        */
 
-      nxsched_merge_prioritized(list_pendingtasks(),
-                                list_readytorun(),
+      nxsched_merge_prioritized(&g_pendingtasks,
+                                &g_readytorun,
                                 TSTATE_TASK_READYTORUN);
     }
 

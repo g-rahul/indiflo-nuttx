@@ -508,7 +508,9 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
 
 #if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
 #ifdef CONFIG_NET_ARP_SEND
+#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
   if (psock->s_domain == PF_INET)
+#endif
     {
       /* Make sure that the IP address mapping is in the ARP table */
 
@@ -517,7 +519,9 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
 #endif /* CONFIG_NET_ARP_SEND */
 
 #ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-  if (psock->s_domain == PF_INET6)
+#ifdef CONFIG_NET_ARP_SEND
+  else
+#endif
     {
       /* Make sure that the IP address mapping is in the Neighbor Table */
 

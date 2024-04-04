@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/nuttx.h>
 #include <nuttx/drivers/addrenv.h>
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/list.h>
@@ -83,6 +82,17 @@ static const char *sim_rptun_get_cpuname(struct rptun_dev_s *dev)
                                  struct sim_rptun_dev_s, rptun);
 
   return priv->cpuname;
+}
+
+static const char *sim_rptun_get_firmware(struct rptun_dev_s *dev)
+{
+  return NULL;
+}
+
+static const struct rptun_addrenv_s *
+sim_rptun_get_addrenv(struct rptun_dev_s *dev)
+{
+  return NULL;
 }
 
 static struct rptun_rsc_s *
@@ -305,6 +315,8 @@ static void sim_rptun_work(void *arg)
 static const struct rptun_ops_s g_sim_rptun_ops =
 {
   .get_cpuname       = sim_rptun_get_cpuname,
+  .get_firmware      = sim_rptun_get_firmware,
+  .get_addrenv       = sim_rptun_get_addrenv,
   .get_resource      = sim_rptun_get_resource,
   .is_autostart      = sim_rptun_is_autostart,
   .is_master         = sim_rptun_is_master,

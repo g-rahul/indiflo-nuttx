@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 
-#include <nuttx/fdt.h>
 #include <nuttx/init.h>
 #include <arch/board/board.h>
 
@@ -76,11 +75,8 @@ uintptr_t g_idle_topstack = LITEX_IDLESTACK_TOP;
  * Name: __litex_start
  ****************************************************************************/
 
-void __litex_start(int hart_index, const void * fdt, int arg)
+void __litex_start(void)
 {
-  (void)hart_index;
-  (void)arg;
-
   const uint32_t *src;
   uint32_t *dest;
 
@@ -106,17 +102,6 @@ void __litex_start(int hart_index, const void * fdt, int arg)
       )
     {
       *dest++ = *src++;
-    }
-
-  /* Assume the FDT address was passed in if not NULL */
-
-  if (fdt)
-    {
-      fdt_register(fdt);
-    }
-  else
-    {
-      fdt_register((const char *)CONFIG_LITEX_FDT_MEMORY_ADDRESS);
     }
 
 #ifdef CONFIG_LITEX_CORE_VEXRISCV_SMP

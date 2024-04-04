@@ -239,19 +239,6 @@ extern "C"
 size_t sam_destaddr(DMA_HANDLE handle);
 
 /****************************************************************************
- * Name: sam_dmaresidual
- *
- * Description:
- *   Returns the number of bytes remaining to be transferred
- *
- * Assumptions:
- *   - DMA handle allocated by sam_dmachannel()
- *
- ****************************************************************************/
-
-size_t sam_dmaresidual(DMA_HANDLE handle);
-
-/****************************************************************************
  * Name: sam_dmachannel
  *
  * Description:

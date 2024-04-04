@@ -978,36 +978,14 @@ static int cxd56_cisif_validate_buf(struct imgdata_s *data,
   return OK;
 }
 
-static int32_t cisif_get_mode(uint8_t nr_datafmts,
-                              imgdata_format_t *datafmts)
-{
-  switch (datafmts[IMGDATA_FMT_MAIN].pixelformat)
-    {
-      case IMGDATA_PIX_FMT_UYVY:                /* YUV 4:2:2 */
-      case IMGDATA_PIX_FMT_RGB565:              /* RGB565 */
-
-        /* CISIF does not distinguish between YUV and RGB */
-
-        return MODE_YUV_TRS_EN;
-
-      case IMGDATA_PIX_FMT_JPEG:                /* JPEG */
-        return MODE_JPG_TRS_EN;
-
-      case IMGDATA_PIX_FMT_JPEG_WITH_SUBIMG:    /* JPEG + YUV 4:2:2 */
-        return MODE_INTLEV_TRS_EN;
-
-      default:
-        return -EINVAL;
-    }
-}
-
 static int cxd56_cisif_set_buf(struct imgdata_s *data,
                                uint8_t nr_datafmts,
-                               imgdata_format_t *datafmts,
+                               FAR imgdata_format_t *datafmts,
                                uint8_t *addr, uint32_t size)
 {
   int      ret;
-  int32_t  mode;
+  uint32_t mode;
+  uint32_t regval;
   uint16_t w;
   uint16_t h;
 
@@ -1017,7 +995,7 @@ static int cxd56_cisif_set_buf(struct imgdata_s *data,
       return ret;
     }
 
-  mode = cisif_get_mode(nr_datafmts, datafmts);
+  mode = cisif_reg_read(CISIF_MODE);
 
   switch (mode)
     {
@@ -1029,18 +1007,17 @@ static int cxd56_cisif_set_buf(struct imgdata_s *data,
         ret = cisif_set_jpg_sarea(addr, size);
         break;
 
-      case MODE_INTLEV_TRS_EN:
+      default: /* MODE_INTLEV_TRS_EN */
 
-        w = datafmts[IMGDATA_FMT_SUB].width;
-        h = datafmts[IMGDATA_FMT_SUB].height;
+        /* Get YUV frame size information */
+
+        regval =  cisif_reg_read(CISIF_ACT_SIZE);
+        h = (regval >> 16) & 0x1ff;
+        w = regval & 0x01ff;
 
         ret = cisif_set_intlev_sarea(addr,
                                      size,
                                      YUV_SIZE(w, h));
-        break;
-
-      default:
-        ret = -EINVAL;
         break;
     }
 

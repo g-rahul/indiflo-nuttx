@@ -40,6 +40,8 @@
 #include "socket/socket.h"
 #include "local/local.h"
 
+#ifdef CONFIG_NET_LOCAL_STREAM
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -92,6 +94,7 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
     {
       nerr("ERROR: Failed to create FIFOs for %s: %d\n",
            client->lc_path, ret);
+
       return ret;
     }
 
@@ -104,6 +107,7 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
     {
       nerr("ERROR: Failed to open write-only FIFOs for %s: %d\n",
            client->lc_path, ret);
+
       goto errout_with_fifos;
     }
 
@@ -114,6 +118,7 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
     {
       nerr("ERROR: Failed to alloc accept conn %s: %d\n",
            client->lc_path, ret);
+
       goto errout_with_outfd;
     }
 
@@ -124,8 +129,9 @@ static int inline local_stream_connect(FAR struct local_conn_s *client,
   ret = local_open_client_rx(client, nonblock);
   if (ret < 0)
     {
-      nerr("ERROR: Failed to open read-only FIFOs for %s: %d\n",
+      nerr("ERROR: Failed to open write-only FIFOs for %s: %d\n",
            client->lc_path, ret);
+
       goto errout_with_conn;
     }
 
@@ -214,13 +220,15 @@ int32_t local_generate_instance_id(void)
 int psock_local_connect(FAR struct socket *psock,
                         FAR const struct sockaddr *addr)
 {
-  FAR struct local_conn_s *client = psock->s_conn;
+  FAR struct local_conn_s *client;
   FAR struct sockaddr_un *unaddr = (FAR struct sockaddr_un *)addr;
   FAR const char *unpath = unaddr->sun_path;
   FAR struct local_conn_s *conn = NULL;
   uint8_t type = LOCAL_TYPE_PATHNAME;
   struct stat buf;
-  int ret = OK;
+  int ret;
+
+  client = psock->s_conn;
 
   if (client->lc_state == LOCAL_STATE_ACCEPT ||
       client->lc_state == LOCAL_STATE_CONNECTED)
@@ -239,9 +247,9 @@ int psock_local_connect(FAR struct socket *psock,
   net_lock();
   while ((conn = local_nextconn(conn)) != NULL)
     {
-      /* Self found, continue */
+      /* Slef found, continue */
 
-      if (conn == client)
+      if (conn == psock->s_conn)
         {
           continue;
         }
@@ -264,6 +272,8 @@ int psock_local_connect(FAR struct socket *psock,
               conn->lc_type == type && conn->lc_proto == SOCK_STREAM &&
               strncmp(conn->lc_path, unpath, UNIX_PATH_MAX - 1) == 0)
             {
+              ret = OK;
+
               /* Bind the address and protocol */
 
               client->lc_type  = conn->lc_type;
@@ -277,8 +287,11 @@ int psock_local_connect(FAR struct socket *psock,
 
               /* We have to do more for the SOCK_STREAM family */
 
-              ret = local_stream_connect(client, conn,
+              if (conn->lc_proto == SOCK_STREAM)
+                {
+                  ret = local_stream_connect(client, conn,
                           _SS_ISNONBLOCK(client->lc_conn.s_flags));
+                }
 
               net_unlock();
               return ret;
@@ -297,3 +310,5 @@ int psock_local_connect(FAR struct socket *psock,
   ret = nx_stat(unpath, &buf, 1);
   return ret < 0 ? ret : -ECONNREFUSED;
 }
+
+#endif /* CONFIG_NET_LOCAL_STREAM */

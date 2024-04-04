@@ -904,7 +904,7 @@ static void spislave_setup_rx_dma(struct spislave_priv_s *priv)
                     SPI_DMA_DESC_NUM,
                     priv->rx_buffer + priv->rx_length,
                     length,
-                    false, priv->dma_channel);
+                    false);
   esp32s3_dma_load(priv->dma_rxdesc, priv->dma_channel, false);
 
   priv->rx_dma_offset = priv->rx_length;
@@ -948,7 +948,7 @@ static void spislave_setup_tx_dma(struct spislave_priv_s *priv)
                     SPI_DMA_DESC_NUM,
                     priv->tx_buffer,
                     SPI_SLAVE_BUFSIZE,
-                    true, priv->dma_channel);
+                    true);
   esp32s3_dma_load(priv->dma_txdesc, priv->dma_channel, true);
 
   spislave_dma_tx_fifo_reset(priv);
@@ -1150,35 +1150,6 @@ void spislave_dma_init(struct spislave_priv_s *priv)
 
   resetbits(SPI_RX_EOF_EN_M, SPI_DMA_CONF_REG(priv->config->id));
 }
-
-/****************************************************************************
- * Name: spislave_dma_deinit
- *
- * Description:
- *   Deinitialize ESP32-S3 SPI slave GDMA engine.
- *
- * Input Parameters:
- *   dev - Device-specific state data
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void spislave_dma_deinit(struct spislave_priv_s *priv)
-{
-  /* Release a DMA channel from peripheral */
-
-  esp32s3_dma_release(priv->dma_channel);
-
-  /* Deinitialize DMA controller */
-
-  esp32s3_dma_deinit();
-
-  /* Disable DMA clock for the SPI peripheral */
-
-  modifyreg32(SYSTEM_PERIP_CLK_EN0_REG, priv->config->dma_clk_bit, 0);
-}
 #endif
 
 /****************************************************************************
@@ -1376,7 +1347,7 @@ static void spislave_initialize(struct spi_slave_ctrlr_s *ctrlr)
   spislave_dma_init(priv);
 #endif
 
-  esp32s3_gpioirqenable(ESP32S3_PIN2IRQ(config->cs_pin), RISING);
+  esp32s3_gpioirqenable(ESP32S3_PIN2IRQ(config->cs_pin), GPIO_INTR_POSEDGE);
 
   /* Force a transaction done interrupt.
    * This interrupt won't fire yet because we initialized the SPI interrupt
@@ -1419,7 +1390,7 @@ static void spislave_deinitialize(struct spi_slave_ctrlr_s *ctrlr)
   resetbits(SPI_TRANS_DONE_INT_ENA_M, SPI_DMA_INT_ENA_REG(priv->config->id));
 
 #ifdef CONFIG_ESP32S3_SPI_DMA
-  spislave_dma_deinit(priv);
+  resetbits(priv->config->dma_clk_bit, SYSTEM_PERIP_CLK_EN0_REG);
   priv->rx_dma_offset = 0;
 #endif
 

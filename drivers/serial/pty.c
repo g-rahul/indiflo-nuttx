@@ -285,21 +285,32 @@ static int pty_open(FAR struct file *filep)
         }
     }
 
-  /* First open? */
+  /* If one side of the driver has been unlinked, then refuse further
+   * opens.
+   */
 
-  if (devpair->pp_nopen == 0)
+  if (devpair->pp_unlinked)
     {
-      /* Yes, create the internal pipe */
-
-      ret = pty_pipe(devpair);
+      ret = -EIDRM;
     }
-
-  /* Increment the count of open references on the driver */
-
-  if (ret >= 0)
+  else
     {
-      devpair->pp_nopen++;
-      DEBUGASSERT(devpair->pp_nopen > 0);
+      /* First open? */
+
+      if (devpair->pp_nopen == 0)
+        {
+          /* Yes, create the internal pipe */
+
+          ret = pty_pipe(devpair);
+        }
+
+      /* Increment the count of open references on the driver */
+
+      if (ret >= 0)
+        {
+          devpair->pp_nopen++;
+          DEBUGASSERT(devpair->pp_nopen > 0);
+        }
     }
 
   nxmutex_unlock(&devpair->pp_lock);
@@ -307,7 +318,7 @@ static int pty_open(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: pty_close
+ * Name: pty_open
  ****************************************************************************/
 
 static int pty_close(FAR struct file *filep)
@@ -361,7 +372,6 @@ static int pty_close(FAR struct file *filep)
     {
       /* Yes.. Free the device pair now (without freeing the semaphore) */
 
-      nxmutex_unlock(&devpair->pp_lock);
       pty_destroy(devpair);
       return OK;
     }
@@ -951,7 +961,6 @@ static int pty_unlink(FAR struct inode *inode)
 
   if (devpair->pp_nopen == 0)
     {
-      nxmutex_unlock(&devpair->pp_lock);
       pty_destroy(devpair);
       return OK;
     }

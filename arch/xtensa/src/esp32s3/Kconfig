@@ -753,10 +753,6 @@ config ESP32S3_LCD
 	---help---
 		LCD controller that outputs parallel data and supports RGB interface.
 
-config ESP32S3_AES_ACCELERATOR
-	bool "AES Accelerator"
-	default n
-
 endmenu # ESP32-S3 Peripheral Selection
 
 menuconfig ESP32S3_WIFI_BT_COEXIST
@@ -1411,20 +1407,6 @@ config ESP32S3_WIFI_STATION_SOFTAP
 
 endchoice # ESP32S3 Wi-Fi mode
 
-config ESP_WIFI_ENABLE_SAE_PK
-	bool "Enable SAE-PK"
-	default y
-	---help---
-		Select this option to enable SAE-PK
-
-config ESP_WIFI_ENABLE_WPA3_OWE_STA
-	bool "Enable OWE STA"
-	default y
-	---help---
-		Select this option to allow the device to establish OWE connection with eligible AP's.
-		PMF (Protected Management Frames) is a prerequisite feature for a WPA3 connection, it needs to be
-		explicitly configured before attempting connection. Please refer to the Wi-Fi Driver API Guide for details.
-
 config ESP32S3_WIFI_STATIC_RXBUF_NUM
 	int "Wi-Fi static RX buffer number"
 	default 10
@@ -1898,8 +1880,7 @@ comment "Partition Table configuration"
 config ESP32S3_PARTITION_TABLE
 	bool "Create MTD partitions from Partition Table"
 	default n
-	depends on ESP32S3_MTD && ESP32S3_APP_FORMAT_LEGACY
-	select ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
+	depends on ESP32S3_MTD && ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
 	---help---
 		Decode partition table and initialize partitions as MTD.
 
@@ -2175,28 +2156,42 @@ config ESP32S3_LCD_REGDEBUG
 
 endmenu
 
-menu "Bootloader and Image Configuration"
+menu "Application Image Configuration"
+
+choice
+	prompt "Application Image Format"
+	default ESP32S3_APP_FORMAT_LEGACY
+	---help---
+		Depending on the chosen 2nd stage bootloader, the application may
+		be required to be perform a specific startup routine. Furthermore,
+		the image binary must be formatted according to the definition from
+		the 2nd stage bootloader.
 
 config ESP32S3_APP_FORMAT_LEGACY
-	bool
-	default y if !ESP32S3_APP_FORMAT_MCUBOOT
-	depends on !ESP32S3_APP_FORMAT_MCUBOOT
+	bool "Legacy format"
 	---help---
 		This is the legacy application image format, as supported by the ESP-IDF
 		2nd stage bootloader.
 
 config ESP32S3_APP_FORMAT_MCUBOOT
-	bool "Enable MCUboot-bootable format"
+	bool "MCUboot-bootable format"
 	depends on !MCUBOOT_BOOTLOADER
 	select ESP32S3_HAVE_OTA_PARTITION
-	select ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
 	---help---
-		Enables the Espressif port of MCUboot to be used as 2nd stage bootloader.
+		The Espressif port of MCUboot supports the loading of unsegmented firmware
+		images.
+
+endchoice # Application Image Format
+
+choice
+	prompt "Source for bootloader binaries"
+	default ESP32S3_BOOTLOADER_DOWNLOAD_PREBUILT
+	---help---
+		Select the action to be taken by the build system for the
+		"make bootloader" target.
 
 config ESP32S3_BOOTLOADER_DOWNLOAD_PREBUILT
-	bool
-	default y if !ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
-	depends on !ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
+	bool "Download prebuilt binaries"
 	---help---
 		The build system will download the prebuilt binaries from
 		https://github.com/espressif/esp-nuttx-bootloader according to the chosen
@@ -2209,6 +2204,8 @@ config ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
 		the https://github.com/espressif/esp-nuttx-bootloader repository and build a
 		custom bootloader according to the chosen Application Image Format
 		(ESP32S3_APP_FORMAT_LEGACY or ESP32S3_APP_FORMAT_MCUBOOT) and partition information.
+
+endchoice
 
 choice
 	prompt "Target slot for image flashing"
@@ -2245,36 +2242,10 @@ config ESP32S3_APP_MCUBOOT_HEADER_SIZE
 	default 32
 	depends on ESP32S3_APP_FORMAT_MCUBOOT
 
-config ESP32S3_PARTITION_TABLE_OFFSET_DEFAULT
-	hex
-	default 0x8000
-	depends on ESP32S3_APP_FORMAT_LEGACY
-
-config ESP32S3_CUSTOM_PARTITION_TABLE_OFFSET
-	bool "Customize partition table offset"
-	default n
-	depends on ESP32S3_APP_FORMAT_LEGACY
-	select ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
-	---help---
-		Enable to select the offset of the partition table in the flash.
-
-if ESP32S3_CUSTOM_PARTITION_TABLE_OFFSET
-
 config ESP32S3_PARTITION_TABLE_OFFSET
 	hex "Partition Table offset"
-	default ESP32S3_PARTITION_TABLE_OFFSET_DEFAULT
+	default 0x8000
 	depends on ESP32S3_APP_FORMAT_LEGACY
-
-endif # ESP32S3_CUSTOM_PARTITION_TABLE_OFFSET
-
-if !ESP32S3_CUSTOM_PARTITION_TABLE_OFFSET
-
-config ESP32S3_PARTITION_TABLE_OFFSET
-	hex
-	default ESP32S3_PARTITION_TABLE_OFFSET_DEFAULT
-	depends on ESP32S3_APP_FORMAT_LEGACY
-
-endif # !ESP32S3_CUSTOM_PARTITION_TABLE_OFFSET
 
 config ESP32S3_KERNEL_OFFSET
 	hex
@@ -2309,15 +2280,6 @@ config ESP32S3_KERNEL_RAM_SIZE
 
 endif # BUILD_PROTECTED
 
-endmenu # Bootloader and Image Configuration
-
-menu "AES accelerate"
-	depends on ESP32S3_AES_ACCELERATOR
-
-config ESP32S3_AES_ACCELERATOR_TEST
-	bool "AES driver test"
-	default n
-
-endmenu # ESP32S3_AES_ACCELERATOR
+endmenu # Application Image Configuration
 
 endif # ARCH_CHIP_ESP32S3

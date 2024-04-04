@@ -147,7 +147,7 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
    * this case, the child task group has been orphaned.
    */
 
-  pgrp = task_getgroup(ppid);
+  pgrp = group_findbypid(ppid);
   if (!pgrp)
     {
       /* Set the task group ID to an invalid group ID.  The dead parent
@@ -174,7 +174,7 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
    * should generate SIGCHLD.
    */
 
-  if (sq_is_singular(&chgrp->tg_members))
+  if (chgrp->tg_nmembers == 1)
     {
       /* Mark that all of the threads in the task group have exited */
 
@@ -360,9 +360,7 @@ static inline void nxtask_exitwakeup(FAR struct tcb_s *tcb, int status)
 
       /* Is this the last thread in the group? */
 
-#ifndef CONFIG_DISABLE_PTHREAD
-      if (sq_is_singular(&group->tg_members))
-#endif
+      if (group->tg_nmembers == 1)
         {
           /* Yes.. Wakeup any tasks waiting for this task to exit */
 

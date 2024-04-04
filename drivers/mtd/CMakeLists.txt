@@ -85,10 +85,6 @@ if(CONFIG_MTD)
     list(APPEND SRCS at24xx.c)
   endif()
 
-  if(CONFIG_MTD_AT25EE)
-    list(APPEND SRCS at25ee.c)
-  endif()
-
   if(CONFIG_MTD_AT45DB)
     list(APPEND SRCS at45db.c)
   endif()

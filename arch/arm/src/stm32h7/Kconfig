@@ -17,6 +17,8 @@ config ARCH_CHIP_STM32H743AG
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_G
 	select STM32H7_IO_CONFIG_A
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 1024 Kb FLASH, 1024K Kb SRAM,
 		UFBGA169
@@ -35,6 +37,8 @@ config ARCH_CHIP_STM32H743BG
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_G
 	select STM32H7_IO_CONFIG_B
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 1024 Kb FLASH, 1024K Kb SRAM,
 		LQFP208
@@ -44,6 +48,8 @@ config ARCH_CHIP_STM32H743BI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_B
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		LQFP208
@@ -53,6 +59,8 @@ config ARCH_CHIP_STM32H743IG
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_G
 	select STM32H7_IO_CONFIG_I
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 1024 Kb FLASH, 1024K Kb SRAM,
 		LQFP176 or UFBGA176
@@ -62,6 +70,8 @@ config ARCH_CHIP_STM32H743II
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_I
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		LQFP176 or UFBGA176
@@ -71,6 +81,8 @@ config ARCH_CHIP_STM32H743VG
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_G
 	select STM32H7_IO_CONFIG_V
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 1024 Kb FLASH, 1024K Kb SRAM,
 		LQFP100 or TFBGA100
@@ -80,6 +92,8 @@ config ARCH_CHIP_STM32H743VI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_V
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		LQFP100 or TFBGA100
@@ -89,6 +103,8 @@ config ARCH_CHIP_STM32H743XG
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_G
 	select STM32H7_IO_CONFIG_X
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 1024 Kb FLASH, 1024K Kb SRAM,
 		TFBGA240
@@ -98,6 +114,8 @@ config ARCH_CHIP_STM32H743XI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_X
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		TFBGA240
@@ -107,6 +125,8 @@ config ARCH_CHIP_STM32H743ZG
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_G
 	select STM32H7_IO_CONFIG_Z
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 1024 Kb FLASH, 1024K Kb SRAM,
 		LQFP144
@@ -116,6 +136,8 @@ config ARCH_CHIP_STM32H743ZI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_Z
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		LQFP144
@@ -197,6 +219,8 @@ config ARCH_CHIP_STM32H747XI
 	select STM32H7_STM32H7X7XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_X
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	select STM32H7_HAVE_SMPS
 	---help---
 		Dual core STM32 H7 Cortex M7+M4, 2048 Kb FLASH, 1024K Kb SRAM
@@ -207,6 +231,8 @@ config ARCH_CHIP_STM32H753AI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_A
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		with cryptographic accelerator, UFBGA169
@@ -225,6 +251,8 @@ config ARCH_CHIP_STM32H753II
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_I
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		with cryptographic accelerator, LQFP176/UFBGA176
@@ -234,6 +262,8 @@ config ARCH_CHIP_STM32H753VI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_V
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		with cryptographic accelerator, LQFP100/TFBGA100
@@ -252,6 +282,8 @@ config ARCH_CHIP_STM32H753ZI
 	select STM32H7_STM32H7X3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_Z
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1024K Kb SRAM,
 		with cryptographic accelerator, LQFP144
@@ -261,6 +293,8 @@ config ARCH_CHIP_STM32H7B3LI
 	select STM32H7_STM32H7B3XX
 	select STM32H7_FLASH_CONFIG_I
 	select STM32H7_IO_CONFIG_L
+	select STM32H7_HAVE_FDCAN1
+	select STM32H7_HAVE_FDCAN2
 	select STM32H7_HAVE_SMPS
 	---help---
 		STM32 H7 Cortex M7, 2048 Kb FLASH, 1376 Kb SRAM,
@@ -504,13 +538,45 @@ config STM32H7_SHMEM_SRAM3
 
 endif
 
+config STM32_HAVE_OTA_PARTITION
+	bool
+	default n
+
 config STM32H7_PROGMEM
 	bool "Flash progmem support"
-	default y if SOC_PROGMEM_OTA_PARTITION
 	default n
 	---help---
 		Add progmem support, start block and end block options are provided to
 		obtain an uniform flash memory mapping.
+
+menu "Application Image Configuration"
+choice
+	prompt "Application Image Format"
+	default STM32_APP_FORMAT_LEGACY
+	---help---
+		Depending on the chosen 2nd stage bootloader, the application may
+		be required to be perform a specific startup routine. Furthermore,
+		the image binary must be formatted according to the definition from
+		the 2nd stage bootloader.
+
+config STM32_APP_FORMAT_LEGACY
+	bool "Legacy format"
+	---help---
+		This is the legacy application image format.
+
+config STM32_APP_FORMAT_MCUBOOT
+	bool "MCUboot-bootable format"
+	select STM32_HAVE_OTA_PARTITION
+	depends on EXPERIMENTAL
+	---help---
+		The MCUboot support of loading the firmware images.
+
+comment "MCUboot support depends on CONFIG_EXPERIMENTAL"
+	depends on !EXPERIMENTAL
+
+endchoice # Application Image Format
+
+endmenu # Application Image Configuration
 
 menu "STM32H7 Peripheral Selection"
 
@@ -780,20 +846,17 @@ config STM32H7_WWDG
 	default n
 	select WATCHDOG
 
-
-menu "STM32H7 FDCAN Selection"
-
 config STM32H7_FDCAN1
 	bool "FDCAN1"
-	default n
 	select STM32H7_FDCAN
+	default n
+	depends on STM32H7_HAVE_FDCAN1
 
 config STM32H7_FDCAN2
 	bool "FDCAN2"
-	default n
 	select STM32H7_FDCAN
-
-endmenu # STM32H7 FDCAN Selection
+	default n
+	depends on STM32H7_HAVE_FDCAN2
 
 menu "STM32H7 I2C Selection"
 
@@ -5943,5 +6006,68 @@ config STM32H7_FDCAN_HPWORK
 endchoice
 
 endmenu # FDCAN Driver
+
+
+menu "Progmem MTD configuration"
+
+if STM32_HAVE_OTA_PARTITION
+
+comment "Application Image OTA Update support"
+
+config STM32_PROGMEM_OTA_PARTITION
+	bool "MTD driver"
+	default n
+	select BCH
+	select MTD
+	select MTD_BYTE_WRITE
+	select MTD_PARTITION
+	select MTD_PROGMEM
+	select STM32H7_PROGMEM
+	---help---
+		Initialize an MTD driver for the Flash, which will
+		add an entry at /dev for application access from userspace.
+
+if STM32_PROGMEM_OTA_PARTITION
+config STM32_MCUBOOT_HEADER_SIZE
+	hex
+	default 0x200
+	depends on STM32_APP_FORMAT_MCUBOOT
+
+config STM32_OTA_PRIMARY_SLOT_DEVPATH
+	string "Application image primary slot device path"
+	default "/dev/ota0"
+
+config STM32_OTA_SECONDARY_SLOT_DEVPATH
+	string "Application image secondary slot device path"
+	default "/dev/ota1"
+
+config STM32_OTA_SCRATCH_DEVPATH
+	string "Scratch partition device path"
+	default "/dev/otascratch"
+
+config STM32_OTA_PRIMARY_SLOT_OFFSET
+	hex "MCUboot application image primary slot offset"
+	default "0x40000"
+
+config STM32_OTA_SECONDARY_SLOT_OFFSET
+	hex "MCUboot application image secondary slot offset"
+	default "0x100000"
+
+config STM32_OTA_SCRATCH_OFFSET
+	hex "MCUboot scratch partition offset"
+	default "0x1c0000"
+
+config STM32_OTA_SLOT_SIZE
+	hex "MCUboot application image slot size (in bytes)"
+	default "0xc0000"
+
+config STM32_OTA_SCRATCH_SIZE
+	hex "MCUboot scratch partition size (in bytes)"
+	default "0x40000"
+
+endif # STM32_PROGMEM_OTA_PARTITION
+endif # STM32_HAVE_OTA_PARTITION
+
+endmenu # Progmem configuration
 
 endif # ARCH_CHIP_STM32H7

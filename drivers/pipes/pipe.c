@@ -31,7 +31,6 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
-#include <sys/ioctl.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/mutex.h>
@@ -208,8 +207,8 @@ static int pipe_register(size_t bufsize, int flags,
 int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags)
 {
   char devname[32];
-  int nonblock = !!(flags & O_NONBLOCK);
   int ret;
+  bool blocking;
 
   /* Register a new pipe device */
 
@@ -218,6 +217,10 @@ int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags)
     {
       return ret;
     }
+
+  /* Check for the O_NONBLOCK bit on flags */
+
+  blocking = (flags & O_NONBLOCK) == 0;
 
   /* Get a write file descriptor */
 
@@ -229,9 +232,9 @@ int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags)
 
   /* Clear O_NONBLOCK if it was set previously */
 
-  if (!nonblock)
+  if (blocking)
     {
-      ret = file_ioctl(filep[1], FIONBIO, &nonblock);
+      ret = file_fcntl(filep[1], F_SETFL, flags & (~O_NONBLOCK));
       if (ret < 0)
         {
           goto errout_with_driver;
@@ -281,7 +284,6 @@ errout_with_driver:
 int pipe2(int fd[2], int flags)
 {
   char devname[32];
-  int nonblock = !!(flags & O_NONBLOCK);
   int ret;
 
   /* Register a new pipe device */
@@ -303,9 +305,9 @@ int pipe2(int fd[2], int flags)
 
   /* Clear O_NONBLOCK if it was set previously */
 
-  if (!nonblock)
+  if ((flags & O_NONBLOCK) == 0)
     {
-      ret = ioctl(fd[1], FIONBIO, &nonblock);
+      ret = fcntl(fd[1], F_SETFL, flags & (~O_NONBLOCK));
       if (ret < 0)
         {
           goto errout_with_driver;

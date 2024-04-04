@@ -47,14 +47,6 @@
 
 #include <nuttx/board.h>
 
-#ifdef CONFIG_SENSORS_LM75
-#include "stm32_lm75.h"
-#endif
-
-#ifdef CONFIG_SENSORS_QENCODER
-#include "board_qencoder.h"
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -153,16 +145,6 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_LM75_I2C
-  /* Configure and initialize the LM75 sensor */
-
-  ret = board_lm75_initialize(0, 1);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: board_lm75_initialize() failed: %d\n", ret);
-    }
-#endif
-
 #ifdef CONFIG_INPUT_BUTTONS
   /* Register the BUTTON driver */
 
@@ -170,26 +152,6 @@ int stm32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: btn_lower_initialize() failed: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_ADC
-  /* Initialize ADC and register the ADC driver. */
-
-  ret = stm32_adc_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_adc_setup failed: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_PWM
-  /* Initialize PWM and register the PWM device */
-
-  ret = stm32_pwm_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_pwm_setup() failed: %d\n", ret);
     }
 #endif
 
@@ -201,19 +163,6 @@ int stm32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize MMC/SD driver: %d\n",
               ret);
-      return ret;
-    }
-#endif
-
-#ifdef CONFIG_SENSORS_QENCODER
-  /* Initialize and register the qencoder driver */
-
-  ret = board_qencoder_initialize(0, STM32F401RCRS485_QETIMER);
-  if (ret != OK)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to register the qencoder: %d\n",
-             ret);
       return ret;
     }
 #endif

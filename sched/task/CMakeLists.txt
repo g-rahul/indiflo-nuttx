@@ -36,7 +36,6 @@ set(SRCS
     task_cancelpt.c
     task_terminate.c
     task_gettid.c
-    task_join.c
     exit.c)
 
 if(CONFIG_SCHED_HAVE_PARENT)

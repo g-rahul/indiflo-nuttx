@@ -69,7 +69,7 @@
  * Private Types
  ****************************************************************************/
 
-#if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
+#if defined(CONFIG_STM32_PROGMEM_OTA_PARTITION)
 
 struct ota_partition_s
 {
@@ -84,7 +84,7 @@ struct ota_partition_s
  * Private Function Prototypes
  ****************************************************************************/
 
-#if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
+#if defined(CONFIG_STM32_PROGMEM_OTA_PARTITION)
 static struct mtd_dev_s *progmem_alloc_mtdpart(uint32_t mtd_offset,
                                                    uint32_t mtd_size);
 static int init_ota_partitions(void);
@@ -96,23 +96,23 @@ static int init_ota_partitions(void);
 
 static struct mtd_dev_s *g_progmem_mtd;
 
-#if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
+#if defined(CONFIG_STM32_PROGMEM_OTA_PARTITION)
 static const struct ota_partition_s g_ota_partition_table[] =
 {
   {
-    .offset  = CONFIG_SOC_OTA_PRIMARY_SLOT_OFFSET,
-    .size    = CONFIG_SOC_OTA_SLOT_SIZE,
-    .devpath = CONFIG_SOC_OTA_PRIMARY_SLOT_DEVPATH
+    .offset  = CONFIG_STM32_OTA_PRIMARY_SLOT_OFFSET,
+    .size    = CONFIG_STM32_OTA_SLOT_SIZE,
+    .devpath = CONFIG_STM32_OTA_PRIMARY_SLOT_DEVPATH
   },
   {
-    .offset  = CONFIG_SOC_OTA_SECONDARY_SLOT_OFFSET,
-    .size    = CONFIG_SOC_OTA_SLOT_SIZE,
-    .devpath = CONFIG_SOC_OTA_SECONDARY_SLOT_DEVPATH
+    .offset  = CONFIG_STM32_OTA_SECONDARY_SLOT_OFFSET,
+    .size    = CONFIG_STM32_OTA_SLOT_SIZE,
+    .devpath = CONFIG_STM32_OTA_SECONDARY_SLOT_DEVPATH
   },
   {
-    .offset  = CONFIG_SOC_OTA_SCRATCH_OFFSET,
-    .size    = CONFIG_SOC_OTA_SCRATCH_SIZE,
-    .devpath = CONFIG_SOC_OTA_SCRATCH_DEVPATH
+    .offset  = CONFIG_STM32_OTA_SCRATCH_OFFSET,
+    .size    = CONFIG_STM32_OTA_SCRATCH_SIZE,
+    .devpath = CONFIG_STM32_OTA_SCRATCH_DEVPATH
   }
 };
 #endif
@@ -121,7 +121,7 @@ static const struct ota_partition_s g_ota_partition_table[] =
  * Private Functions
  ****************************************************************************/
 
-#if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
+#if defined(CONFIG_STM32_PROGMEM_OTA_PARTITION)
 
 /****************************************************************************
  * Name: sam_progmem_alloc_mtdpart
@@ -209,7 +209,7 @@ static int init_ota_partitions(void)
 
   return ret;
 }
-#endif /* CONFIG_SOC_PROGMEM_OTA_PARTITION */
+#endif /* CONFIG_STM32_PROGMEM_OTA_PARTITION */
 
 /****************************************************************************
  * Public Functions
@@ -240,7 +240,7 @@ int stm32_progmem_init(void)
       ret = -EIO;
     }
 
-#ifdef CONFIG_SOC_PROGMEM_OTA_PARTITION
+#ifdef CONFIG_STM32_PROGMEM_OTA_PARTITION
   ret = init_ota_partitions();
   if (ret < 0)
     {

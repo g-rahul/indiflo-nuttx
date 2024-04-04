@@ -42,7 +42,7 @@
 #include "sched/sched.h"
 #include "paging/paging.h"
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 
 /****************************************************************************
  * Public Data
@@ -136,8 +136,7 @@ static void pg_callback(FAR struct tcb_s *tcb, int result)
   pginfo("g_pftcb: %p\n", g_pftcb);
   if (g_pftcb)
     {
-      FAR struct tcb_s *htcb = (FAR struct tcb_s *)
-                               list_waitingforfill()->head;
+      FAR struct tcb_s *htcb = (FAR struct tcb_s *)g_waitingforfill.head;
       FAR struct tcb_s *wtcb = nxsched_get_tcb(g_pgworker);
 
       /* Find the higher priority between the task waiting for the fill to
@@ -226,7 +225,7 @@ static inline bool pg_dequeue(void)
     {
       /* Remove the TCB from the head of the list (if any) */
 
-      g_pftcb = (FAR struct tcb_s *)dq_remfirst(list_waitingforfill());
+      g_pftcb = (FAR struct tcb_s *)dq_remfirst(&g_waitingforfill);
       pginfo("g_pftcb: %p\n", g_pftcb);
       if (g_pftcb != NULL)
         {
@@ -694,4 +693,4 @@ int pg_worker(int argc, FAR char *argv[])
 
   return OK; /* To keep some compilers happy */
 }
-#endif /* CONFIG_LEGACY_PAGING */
+#endif /* CONFIG_PAGING */

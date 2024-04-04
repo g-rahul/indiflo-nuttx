@@ -20,24 +20,19 @@
 
 include common/Make.defs
 
-CHIP_ASRCS += k230_head.S
+# Specify our HEAD assembly file.  This will be linked as
+# the first object file, so it will appear at address 0
+HEAD_ASRC = k230_head.S
 
 # Specify our C code within this directory to be included
 CHIP_CSRCS  = k230_start.c k230_irq_dispatch.c k230_irq.c
-CHIP_CSRCS += k230_timerisr.c k230_allocateheap.c k230_hart.c
+CHIP_CSRCS += k230_timerisr.c k230_allocateheap.c
 
 ifeq ($(CONFIG_BUILD_KERNEL),y)
 CHIP_CSRCS += k230_mm_init.c
+CMN_ASRCS  += k230_exception_m.S
 endif
 
 ifeq ($(CONFIG_MM_PGALLOC),y)
 CHIP_CSRCS += k230_pgalloc.c
-endif
-
-ifeq ($(CONFIG_BUILD_PROTECTED),y)
-CHIP_CSRCS += k230_userspace.c
-endif
-
-ifeq ($(CONFIG_RPTUN),y)
-CHIP_CSRCS += k230_rptun.c k230_ipi.c
 endif
