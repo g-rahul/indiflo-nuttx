@@ -2205,6 +2205,72 @@ config DEBUG_IPC_INFO
 
 endif # DEBUG_IPC
 
+config DEBUG_PCI
+	bool "PCI Debug Features"
+	default n
+	depends on PCI
+	---help---
+		Enable PCI driver debug features.
+
+		Support for this debug option is architecture-specific and may not
+		be available for some MCUs.
+
+if DEBUG_PCI
+
+config DEBUG_PCI_ERROR
+	bool "PCI Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable PCI driver error output to SYSLOG.
+
+config DEBUG_PCI_WARN
+	bool "PCI Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable PCI driver warning output to SYSLOG.
+
+config DEBUG_PCI_INFO
+	bool "PCI Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable PCI driver informational output to SYSLOG.
+
+endif # DEBUG_PCI
+
+config DEBUG_RPMSG
+	bool "RPMSG Debug Features"
+	default n
+	depends on RPMSG
+	---help---
+		Enable RPMSG driver debug features.
+
+if DEBUG_RPMSG
+
+config DEBUG_RPMSG_ERROR
+	bool "RPMSG Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable RPMSG driver error output to SYSLOG.
+
+config DEBUG_RPMSG_WARN
+	bool "RPMSG Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable RPMSG driver warning output to SYSLOG.
+
+config DEBUG_RPMSG_INFO
+	bool "RPMSG Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable RPMSG driver informational output to SYSLOG.
+
+endif # DEBUG_RPMSG
 endif # DEBUG_FEATURES
 
 config ARCH_HAVE_STACKCHECK

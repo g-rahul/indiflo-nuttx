@@ -56,6 +56,53 @@
 #  undef HAVE_RTC_DRIVER
 #endif
 
+/* USB OTG FS
+ *
+ * PA9   OTG_FS_VBUS VBUS sensing
+ * PI12  OTG_FS_PowerSwitchOn
+ * PI13  OTG_FS_Overcurrent
+ */
+
+#define GPIO_OTGFS_VBUS   (GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz| \
+                           GPIO_OPENDRAIN|GPIO_PORTA|GPIO_PIN9)
+
+#define GPIO_OTGFS_PWRON  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|  \
+                           GPIO_PUSHPULL|GPIO_PORTI|GPIO_PIN12)
+
+#ifdef CONFIG_USBHOST
+#  define GPIO_OTGFS_OVER (GPIO_INPUT|GPIO_EXTI|GPIO_FLOAT| \
+                           GPIO_SPEED_100MHz|GPIO_PUSHPULL| \
+                           GPIO_PORTI|GPIO_PIN13)
+#else
+#  define GPIO_OTGFS_OVER (GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz| \
+                           GPIO_PUSHPULL|GPIO_PORTI|GPIO_PIN13)
+#endif
+
+/* SD Card
+ *
+ * PG7  Card detected pin
+ * PD7  Enable power supply SD Card pin
+ */
+
+#if defined(CONFIG_STM32H7_SDMMC1)
+#  define HAVE_SDIO
+#endif
+
+#if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_MMCSD_SDIO)
+#  undef HAVE_SDIO
+#endif
+
+#define GPIO_SDIO_NCD     (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTG | GPIO_PIN7)
+#define GPIO_SD1_PWR_EN_N (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
+                           GPIO_OUTPUT_SET | GPIO_PORTD | GPIO_PIN7)
+
+#define SDIO_SLOTNO        0
+#define SDIO_MINOR         0
+
+/* PWM */
+
+#define BUZZER_PWMTIMER 4
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -76,5 +123,69 @@
  ****************************************************************************/
 
 int stm32_bringup(void);
+
+/****************************************************************************
+ * Name: stm32_usbinitialize
+ *
+ * Description:
+ *   Called from stm32_usbinitialize very early in inialization to setup
+ *   USB-related GPIO pins for the LINUM-STM32H753BI board.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_STM32H7_OTGFS
+void weak_function stm32_usbinitialize(void);
+#endif
+
+/****************************************************************************
+ * Name: stm32_dma_alloc_init
+ *
+ * Description:
+ *   Called to create a FAT DMA allocator
+ *
+ * Returned Value:
+ *   0 on success or -ENOMEM
+ *
+ ****************************************************************************/
+
+#if defined (CONFIG_FAT_DMAMEMORY)
+int stm32_dma_alloc_init(void);
+#endif
+
+/****************************************************************************
+ * Name: stm32_sdio_initialize
+ *
+ * Description:
+ *   Initialize SDIO-based MMC/SD card support
+ *
+ ****************************************************************************/
+
+#ifdef HAVE_SDIO
+int stm32_sdio_initialize(void);
+#endif
+
+/****************************************************************************
+ * Name: stm32_at24_init
+ *
+ * Description:
+ *   Initialize and register the EEPROM for 24XX  driver.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_I2C_EE_24XX
+int stm32_at24_init(char *path);
+#endif
+
+/****************************************************************************
+ * Name: stm32_pwm_setup
+ *
+ * Description:
+ *   Initialize PWM and register the PWM device.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PWM
+int stm32_pwm_setup(void);
+#endif
 
 #endif /* __BOARDS_ARM_STM32H7_LINUM_STM32H753BI_SRC_LINUM_STM32H753BI_H */

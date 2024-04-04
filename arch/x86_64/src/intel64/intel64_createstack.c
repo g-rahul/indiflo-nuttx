@@ -161,7 +161,7 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       if (!tcb->stack_alloc_ptr)
         {
-          serr("ERROR: Failed to allocate stack, size %d\n", stack_size);
+          serr("ERROR: Failed to allocate stack, size %zu\n", stack_size);
         }
 #endif
     }
@@ -192,8 +192,9 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       /* The intel64 stack must be aligned at word (16 byte) boundaries. If
        * necessary top_of_stack must be rounded down to the next boundary.
-       * We intentionally align at 8 byte boundary, because at task_start,
-       * only frame pointer will be pushed, not instruction pointer.
+       * We intentionally align at 8 byte boundary (look at up_stack_frame())
+       * , because at task_start, only frame pointer will be pushed, not
+       * instruction pointer.
        */
 
       top_of_stack &= ~0x0f;

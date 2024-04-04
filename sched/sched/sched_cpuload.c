@@ -76,7 +76,7 @@
  * each would have a load of 25% of the total.
  */
 
-volatile uint32_t g_cpuload_total;
+volatile clock_t g_cpuload_total;
 
 /****************************************************************************
  * Public Functions
@@ -97,12 +97,8 @@ volatile uint32_t g_cpuload_total;
  *
  ****************************************************************************/
 
-void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, uint32_t ticks)
+void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 {
-  irqstate_t flags;
-
-  flags = enter_critical_section();
-
   tcb->ticks += ticks;
   g_cpuload_total += ticks;
 
@@ -115,12 +111,12 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, uint32_t ticks)
        * total.
        */
 
-      for (i = 0; i < g_npidhash; i++)
+      for (i = 0; i < nxsched_npidhash(); i++)
         {
-          if (g_pidhash[i])
+          if (nxsched_pidhash()[i])
             {
-              g_pidhash[i]->ticks >>= 1;
-              total += g_pidhash[i]->ticks;
+              nxsched_pidhash()[i]->ticks >>= 1;
+              total += nxsched_pidhash()[i]->ticks;
             }
         }
 
@@ -128,8 +124,6 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, uint32_t ticks)
 
       g_cpuload_total = total;
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -153,7 +147,7 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, uint32_t ticks)
  *
  ****************************************************************************/
 
-void nxsched_process_cpuload_ticks(uint32_t ticks)
+void nxsched_process_cpuload_ticks(clock_t ticks)
 {
   int i;
 
@@ -215,10 +209,11 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
    * do this too, but this would require a little more overhead.
    */
 
-  if (g_pidhash[hash_index] && g_pidhash[hash_index]->pid == pid)
+  if (nxsched_pidhash()[hash_index] &&
+      nxsched_pidhash()[hash_index]->pid == pid)
     {
       cpuload->total  = g_cpuload_total;
-      cpuload->active = g_pidhash[hash_index]->ticks;
+      cpuload->active = nxsched_pidhash()[hash_index]->ticks;
       ret = OK;
     }
 

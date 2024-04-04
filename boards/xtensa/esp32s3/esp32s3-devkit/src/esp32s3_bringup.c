@@ -100,6 +100,15 @@
 #  include "esp32s3_board_rmt.h"
 #endif
 
+#ifdef CONFIG_ESP32S3_SPI
+#include "esp32s3_spi.h"
+#include "esp32s3_board_spidev.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_AES_ACCELERATOR
+#  include "esp32s3_aes.h"
+#endif
+
 #include "esp32s3-devkit.h"
 
 /****************************************************************************
@@ -136,6 +145,24 @@ int esp32s3_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to init HIMEM: %d\n", ret);
     }
+#endif
+
+#if defined(CONFIG_ESP32S3_SPI) && defined(CONFIG_SPI_DRIVER)
+  #ifdef CONFIG_ESP32S3_SPI2
+  ret = board_spidev_initialize(ESP32S3_SPI2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init spidev 2: %d\n", ret);
+    }
+  #endif
+
+  #ifdef CONFIG_ESP32S3_SPI3
+  ret = board_spidev_initialize(ESP32S3_SPI3);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init spidev 3: %d\n", ret);
+    }
+  #endif
 #endif
 
 #if defined(CONFIG_ESP32S3_EFUSE)
@@ -413,6 +440,20 @@ int esp32s3_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize SPI ethernet LAN9250.\n");
     }
+#endif
+
+#ifdef CONFIG_ESP32S3_AES_ACCELERATOR
+  ret = esp32s3_aes_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize AES: %d\n", ret);
+    }
+#ifdef CONFIG_ESP32S3_AES_ACCELERATOR_TEST
+  else
+    {
+      esp32s3_aes_test();
+    }
+#endif
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but

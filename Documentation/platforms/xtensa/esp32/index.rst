@@ -95,6 +95,7 @@ AES          Yes
 Bluetooth    Yes
 CAN/TWAI     Yes
 DMA          Yes
+DAC          Yes    One-shot
 eFuse        Yes
 Ethernet     Yes
 GPIO         Yes
@@ -403,6 +404,13 @@ Build and generate the QEMU image::
 A QEMU-compatible ``nuttx.merged.bin`` binary image will be created. It can be run as::
 
  $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw
+
+QEMU Networking
+---------------
+
+Networking is possible using the openeth MAC driver. Enable ``ESP32_OPENETH`` option and set the nic in QEMU:
+
+ $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw -nic user,model=open_eth
 
 Secure Boot and Flash Encryption
 ================================

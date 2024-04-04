@@ -81,7 +81,7 @@
 #define _FBIOCBASE      (0x2800) /* Frame buffer character driver ioctl commands */
 #define _NXTERMBASE     (0x2900) /* NxTerm character driver ioctl commands */
 #define _RFIOCBASE      (0x2a00) /* RF devices ioctl commands */
-#define _RPTUNBASE      (0x2b00) /* Remote processor tunnel ioctl commands */
+#define _RPMSGBASE      (0x2b00) /* Remote processor message ioctl commands */
 #define _NOTECTLBASE    (0x2c00) /* Note filter control ioctl commands*/
 #define _NOTERAMBASE    (0x2d00) /* Noteram device ioctl commands*/
 #define _RCIOCBASE      (0x2e00) /* Remote Control device ioctl commands */
@@ -189,13 +189,25 @@
                                            */
 
 #ifdef CONFIG_FDSAN
-#define FIOC_SETTAG     _FIOC(0x000e)     /* IN:  FAR uint64_t *
+#define FIOC_SETTAG_FDSAN _FIOC(0x000e)   /* IN:  FAR uint64_t *
                                            * Pointer to file tag
                                            * OUT: None
                                            */
 
-#define FIOC_GETTAG     _FIOC(0x000f)     /* IN:  FAR uint64_t *
+#define FIOC_GETTAG_FDSAN _FIOC(0x000f)   /* IN:  FAR uint64_t *
                                            * Pointer to file tag
+                                           * OUT: None
+                                           */
+#endif
+
+#ifdef CONFIG_FDCHECK
+#define FIOC_SETTAG_FDCHECK _FIOC(0x0010) /* IN:  FAR uint8_t *
+                                           * Pointer to file fdcheck tag
+                                           * OUT: None
+                                           */
+
+#define FIOC_GETTAG_FDCHECK _FIOC(0x0011) /* IN:  FAR uint8_t *
+                                           * Pointer to file fdcheck tag
                                            * OUT: None
                                            */
 #endif
@@ -578,10 +590,10 @@
 #define _RFIOCVALID(c)    (_IOC_TYPE(c)==_RFIOCBASE)
 #define _RFIOC(nr)        _IOC(_RFIOCBASE,nr)
 
-/* Rptun drivers ************************************************************/
+/* Rpmsg drivers ************************************************************/
 
-#define _RPTUNIOCVALID(c)   (_IOC_TYPE(c)==_RPTUNBASE)
-#define _RPTUNIOC(nr)       _IOC(_RPTUNBASE,nr)
+#define _RPMSGIOCVALID(c)   (_IOC_TYPE(c)==_RPMSGBASE)
+#define _RPMSGIOC(nr)       _IOC(_RPMSGBASE,nr)
 
 /* Notectl drivers **********************************************************/
 

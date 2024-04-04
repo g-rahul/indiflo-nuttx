@@ -30,9 +30,11 @@
 #include <arch/k230/chip.h>
 
 #include "k230_memorymap.h"
+#include "k230_hart.h"
 
 #include "hardware/k230_memorymap.h"
 #include "hardware/k230_plic.h"
+#include "hardware/k230_clint.h"
 
 #include "riscv_internal.h"
 #include "riscv_percpu.h"
@@ -71,5 +73,11 @@
 #endif /* !defined(CONFIG_SMP) && defined(CONFIG_ARCH_USE_S_MODE) */
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 15 */
 
-#endif /* __ASSEMBLY__  */
+#else  /* ! __ASSEMBLY__ */
+
+/* always show on uart0 */
+
+#define k230_putc(c)  (*(volatile uint32_t*)0x91400000 = c)
+
+#endif /* __ASSEMBLY__ */
 #endif /* __ARCH_RISCV_SRC_K230_CHIP_H */

@@ -40,192 +40,124 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Map the whole I/O memory with vaddr = paddr mappings */
+#ifdef CONFIG_K230_PBMT_THEAD
+/* T-Head Memory Type PTE definitions */
 
-#define MMU_IO_BASE     (0x80400000)  // KPU config
-#define MMU_IO_SIZE     (0x19c00000)  // DDR config
+#  define _PAGE_SEC   (1UL << 59)   /* Security */
+#  define _PAGE_SHARE (1UL << 60)   /* Shareable */
+#  define _PAGE_BUF   (1UL << 61)   /* Bufferable */
+#  define _PAGE_CACHE (1UL << 62)   /* Cacheable */
+#  define _PAGE_SO    (1UL << 63)   /* Strong Order */
 
-#ifdef CONFIG_ARCH_MMU_TYPE_SV32
+#  define _THEAD_PMA  (_PAGE_SHARE | _PAGE_BUF | _PAGE_CACHE)
+#  define _THEAD_IO   (_PAGE_BUF   | _PAGE_SO)
+#  define _THEAD_NC   (_PAGE_SHARE | _PAGE_BUF)
 
-/* Physical and virtual addresses to page tables (vaddr = paddr mapping) */
-
-#define PGT_L1_PBASE    (uintptr_t)&m_l1_pgtable
-#define PGT_L2_PBASE    (uintptr_t)&m_l2_pgtable
-#define PGT_L1_VBASE    PGT_L1_PBASE
-#define PGT_L2_VBASE    PGT_L2_PBASE
-
-#define PGT_L1_SIZE     (1024)       /* Enough to map 4 GiB */
-#define PGT_L2_SIZE     (3072)       /* Enough to map 12 MiB */
-
-#define SLAB_COUNT      (sizeof(m_l2_pgtable) / RV_MMU_PAGE_SIZE)
-
-#define KMM_PAGE_SIZE   RV_MMU_L2_PAGE_SIZE
-#define KMM_PBASE       PGT_L2_PBASE   
-#define KMM_PBASE_IDX   2   
-#define KMM_SPBASE      PGT_L1_PBASE
-#define KMM_SPBASE_IDX  1
-
-#elif CONFIG_ARCH_MMU_TYPE_SV39
-
-/* Physical and virtual addresses to page tables (vaddr = paddr mapping) */
-
-#define PGT_L1_PBASE    (uintptr_t)&m_l1_pgtable
-#define PGT_L2_PBASE    (uintptr_t)&m_l2_pgtable
-#define PGT_L3_PBASE    (uintptr_t)&m_l3_pgtable
-#define PGT_L1_VBASE    PGT_L1_PBASE
-#define PGT_L2_VBASE    PGT_L2_PBASE
-#define PGT_L3_VBASE    PGT_L3_PBASE
-
-#define PGT_L1_SIZE     (512)  /* Enough to map 512 GiB */
-#define PGT_L2_SIZE     (512)  /* Enough to map 1 GiB */
-#define PGT_L3_SIZE     (1024) /* Enough to map 4 MiB (2MiB x 2) */
-
-#define SLAB_COUNT      (sizeof(m_l3_pgtable) / RV_MMU_PAGE_SIZE)
-
-#define KMM_PAGE_SIZE   RV_MMU_L3_PAGE_SIZE
-#define KMM_PBASE       PGT_L3_PBASE   
-#define KMM_PBASE_IDX   3   
-#define KMM_SPBASE      PGT_L2_PBASE
-#define KMM_SPBASE_IDX  2
+#  define K230_DEV_FLAGS  (_THEAD_IO  | MMU_IO_FLAGS)
+#  define K230_TXT_FLAGS  (_THEAD_PMA | MMU_KTEXT_FLAGS)
+#  define K230_DAT_FLAGS  (_THEAD_PMA | MMU_KDATA_FLAGS)
+#  define K230_SHM_FLAGS  (_THEAD_NC  | MMU_KDATA_FLAGS)
 
 #else
-#error No valid MMU defined.
+/* Svpbmt Memory Type PTE definitions */
+
+#  define _PAGE_NC    (1UL << 61)
+#  define _PAGE_IO    (1UL << 62)
+
+#  define SVPBMT_PMA  (0)
+#  define SVPBMT_IO   (_PAGE_IO)
+#  define SVPBMT_NC   (_PAGE_NC)
+
+#  define K230_DEV_FLAGS   (SVPBMT_IO  | MMU_IO_FLAGS)
+#  define K230_SHM_FLAGS   (SVPBMT_NC  | MMU_KDATA_FLAGS)
+#  define K230_TXT_FLAGS   (SVPBMT_PMA | MMU_KTEXT_FLAGS)
+#  define K230_DAT_FLAGS   (SVPBMT_PMA | MMU_KDATA_FLAGS)
 #endif
+
+/* for PTE dump purposes, covers Svpbmt or MAEE w/o bit-59 */
+
+#define MMU_PBMT_MASK     (0xful << 60)
+#define MMU_PBMT_VAL(x)   (((x) & MMU_PBMT_MASK) >> 60)
+
+#define MMUFD(x)  (uint16_t)(((x) & 0xff) | (MMU_PBMT_VAL(x) << 8))
+
+/* Map the whole I/O & PLIC memory with vaddr = paddr mappings */
+
+#define MMU_DEV_BASE    (0x80400000ul)      /* KPU config */
+#define MMU_DEV_SIZE    (0x11200000ul)      /* 274MB till Hi-sys end */
+#define MMU_INT_BASE    (0xF00000000ul)     /* PLIC base */
+#define MMU_INT_SIZE    (0x400000ul)        /* 4MB for PLIC */
+
+#ifdef CONFIG_RPTUN
+#define MMU_SHM_BASE    (uintptr_t)CONFIG_K230_RPTUN_SHM_ADDR
+#define MMU_SHM_SIZE    CONFIG_K230_RPTUN_SHM_SIZE
+#endif
+
+#ifndef CONFIG_ARCH_MMU_TYPE_SV39
+#error "No valid MMU type defined"
+#endif
+
+/* Physical and virtual addresses to page tables (vaddr = paddr mapping)
+ * Note NUTTSBI kernel can live in small flash+ram regions thus needs L3.
+ * We also assume KFLASH and KSRAM can be held by one L3 table (4MB).
+ */
+
+#define PGT_L1_PBASE    (uintptr_t)&m_l1_pgtable
+#define PGT_L2_PBDDR    (uintptr_t)&m_l2_pgt_ddr
+#define PGT_L2_PBINT    (uintptr_t)&m_l2_pgt_int
+#define PGT_L2_PBDEV    (uintptr_t)&m_l2_pgt_dev
+#define PGT_L3_PBDDR    (uintptr_t)&m_l3_pgt_ddr
+
+#define PGT_L1_VBASE    PGT_L1_PBASE
+#define PGT_L2_VBDDR    PGT_L2_PBDDR
+#define PGT_L2_VBINT    PGT_L2_PBINT
+#define PGT_L2_VBDEV    PGT_L2_PBDEV
+#define PGT_L3_VBDDR    PGT_L3_PBDDR
+
+#define PGT_L1_SIZE     (512)  /* Enough for 512 GiB */
+#define PGT_L2_SIZE     (512)  /* Enough for 1 GiB */
+#define PGT_L3_SIZE     (1024) /* Enough for 4 MiB */
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
-struct pgalloc_slab_s
-{
-  sq_entry_t  *next;
-  void        *memory;
-};
-typedef struct pgalloc_slab_s pgalloc_slab_t;
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* Kernel mappings simply here, mapping is vaddr=paddr */
+/* Kernel mapping use simple identical mapping (i.e. vaddr==paddr). */
 
 static size_t         m_l1_pgtable[PGT_L1_SIZE] locate_data(".pgtables");
-static size_t         m_l2_pgtable[PGT_L2_SIZE] locate_data(".pgtables");
-#ifdef CONFIG_ARCH_MMU_TYPE_SV39
-static size_t         m_l3_pgtable[PGT_L3_SIZE] locate_data(".pgtables");
-#endif
+static size_t         m_l2_pgt_dev[PGT_L2_SIZE] locate_data(".pgtables");
+static size_t         m_l2_pgt_int[PGT_L2_SIZE] locate_data(".pgtables");
+static size_t         m_l2_pgt_ddr[PGT_L2_SIZE] locate_data(".pgtables");
+static size_t         m_l3_pgt_ddr[PGT_L3_SIZE] locate_data(".pgtables");
 
-/* Kernel mappings (L1 base) */
+/* Kernel mappings (L1 base) required by riscv_addrenv */
 
-uintptr_t               g_kernel_mappings  = PGT_L1_VBASE;
-uintptr_t               g_kernel_pgt_pbase = PGT_L1_PBASE;
-
-/* L3 page table allocator */
-
-static sq_queue_t       g_free_slabs;
-static pgalloc_slab_t   g_slabs[SLAB_COUNT];
+uintptr_t             g_kernel_mappings  = PGT_L1_VBASE;
+uintptr_t             g_kernel_pgt_pbase = PGT_L1_PBASE;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: slab_init
- *
- * Description:
- *   Initialize slab allocator for L2 or L3 page table entries
- *
- * L2 Page table is used for SV32. L3 used for SV39
- *
- * Input Parameters:
- *   start - Beginning of the L2 or L3 page table pool
- *
+ * Name: dump_pgtable  dump one pagetable
  ****************************************************************************/
 
-static void slab_init(uintptr_t start)
+static void dump_pgtable(const size_t * pgt, uint32_t len, const char * name)
 {
-  int i;
-
-  sq_init(&g_free_slabs);
-
-  for (i = 0; i < SLAB_COUNT; i++)
+  minfo("%s at %lx\n", name, (size_t)pgt);
+  for (uint32_t i = 0; i < len ; i++)
     {
-      g_slabs[i].memory = (void *)start;
-      sq_addlast((sq_entry_t *)&g_slabs[i], (sq_queue_t *)&g_free_slabs);
-      start += RV_MMU_PAGE_SIZE;
-    }
-}
-
-/****************************************************************************
- * Name: slab_alloc
- *
- * Description:
- *   Allocate single slab for L2/L3 page table entry
- *
- * L2 Page table is used for SV32. L3 used for SV39
- *
- ****************************************************************************/
-
-static uintptr_t slab_alloc(void)
-{
-  pgalloc_slab_t *slab = (pgalloc_slab_t *)sq_remfirst(&g_free_slabs);
-  return slab ? (uintptr_t)slab->memory : 0;
-}
-
-/****************************************************************************
- * Name: map_region
- *
- * Description:
- *   Map a region of physical memory to the L3 page table
- *
- * Input Parameters:
- *   paddr - Beginning of the physical address mapping
- *   vaddr - Beginning of the virtual address mapping
- *   size - Size of the region in bytes
- *   mmuflags - The MMU flags to use in the mapping
- *
- ****************************************************************************/
-
-static void map_region(uintptr_t paddr, uintptr_t vaddr, size_t size,
-                       uint32_t mmuflags)
-{
-  uintptr_t endaddr;
-  uintptr_t pbase;
-  int npages;
-  int i;
-  int j;
-
-  /* How many pages */
-
-  npages = (size + RV_MMU_PAGE_MASK) >> RV_MMU_PAGE_SHIFT;
-  endaddr = vaddr + size;
-
-  for (i = 0; i < npages; i += RV_MMU_PAGE_ENTRIES)
-    {
-      /* See if a mapping exists ? */
-
-      pbase = mmu_pte_to_paddr(mmu_ln_getentry(
-                 KMM_SPBASE_IDX, KMM_SPBASE, vaddr));
-      if (!pbase)
+      uintptr_t pte = (uintptr_t)pgt[i];
+      if (pte & PTE_VALID)
         {
-          /* No, allocate 1 page, this must not fail */
-
-          pbase = slab_alloc();
-          DEBUGASSERT(pbase);
-
-          /* Map it to the new table */
-
-          mmu_ln_setentry(
-                  KMM_SPBASE_IDX, KMM_SPBASE, pbase, vaddr, MMU_UPGT_FLAGS);
-        }
-
-      /* Then add the mappings */
-
-      for (j = 0; j < RV_MMU_PAGE_ENTRIES && vaddr < endaddr; j++)
-        {
-          mmu_ln_setentry(KMM_PBASE_IDX, pbase, paddr, vaddr, mmuflags);
-          paddr += KMM_PAGE_SIZE;
-          vaddr += KMM_PAGE_SIZE;
+          minfo("#%03d paddr:%09lx flags:%03x %s\n", i,
+                mmu_pte_to_paddr(pte), MMUFD(pte),
+                (pte & PTE_LEAF_MASK)? "" : ">>>");
         }
     }
 }
@@ -245,45 +177,66 @@ static void map_region(uintptr_t paddr, uintptr_t vaddr, size_t size,
 
 void k230_kernel_mappings(void)
 {
-  /* Initialize slab allocator for the L2/L3 page tables */
+  /* Map I/O region in L2 page table. */
 
-  slab_init(KMM_PBASE);
+  minfo("\nflags: dev=%03x shm=%03x dat=%03x txt=%03x\n",
+       MMUFD(K230_DEV_FLAGS | PTE_VALID), MMUFD(K230_SHM_FLAGS | PTE_VALID),
+       MMUFD(K230_DAT_FLAGS | PTE_VALID), MMUFD(K230_TXT_FLAGS | PTE_VALID));
 
-  /* Begin mapping memory to MMU; note that at this point the MMU is not yet
-   * active, so the page table virtual addresses are actually physical
-   * addresses and so forth. M-mode does not perform translations anyhow, so
-   * this mapping is quite simple to do
-   */
+  minfo("map DEV L2(%ldMB)\n", MMU_DEV_SIZE >> 20);
+  mmu_ln_map_region(2, PGT_L2_VBDEV, MMU_DEV_BASE, MMU_DEV_BASE,
+                    MMU_DEV_SIZE, K230_DEV_FLAGS);
 
-  /* Map I/O region, use enough large page tables for the IO region. */
+  /* Map INT region using L2 page table */
 
-  binfo("map I/O regions\n");
-  mmu_ln_map_region(1, PGT_L1_VBASE, MMU_IO_BASE, MMU_IO_BASE,
-                    MMU_IO_SIZE, MMU_IO_FLAGS);
+  minfo("map INT L2(%ldMB)\n", MMU_INT_SIZE >> 20);
+  mmu_ln_map_region(2, PGT_L2_VBINT, MMU_INT_BASE, MMU_INT_BASE,
+                    MMU_INT_SIZE, K230_DEV_FLAGS);
 
-  /* Map the kernel text and data for L2/L3 */
+  /* Map kernel area use L3 */
 
-  binfo("map kernel text\n");
-  map_region(KFLASH_START, KFLASH_START, KFLASH_SIZE, MMU_KTEXT_FLAGS);
-
-  binfo("map kernel data\n");
-  map_region(KSRAM_START, KSRAM_START, KSRAM_SIZE, MMU_KDATA_FLAGS);
-
-#ifdef CONFIG_ARCH_MMU_TYPE_SV39
-
-  /* Connect the L1 and L2 page tables for the kernel text and data */
-
-  binfo("connect the L1 and L2 page tables\n");
-  mmu_ln_setentry(1, PGT_L1_VBASE, PGT_L2_PBASE, KFLASH_START, PTE_G);
+  minfo("map kernel L2/L3(%ldKB)\n", (KFLASH_SIZE + KSRAM_SIZE) >> 10);
+  mmu_ln_map_region(3, PGT_L3_VBDDR, KFLASH_START, KFLASH_START,
+                   KFLASH_SIZE, K230_TXT_FLAGS);
+  mmu_ln_map_region(3, PGT_L3_VBDDR, KSRAM_START, KSRAM_START,
+                   KSRAM_SIZE, K230_DAT_FLAGS);
 
   /* Map the page pool */
 
-  binfo("map the page pool\n");
-  mmu_ln_map_region(2, PGT_L2_VBASE, PGPOOL_START, PGPOOL_START, PGPOOL_SIZE,
-                    MMU_KDATA_FLAGS);
-#elif CONFIG_ARCH_MMU_TYPE_SV32
-  binfo("map the page pool\n");
-  map_region(PGPOOL_START, PGPOOL_START, PGPOOL_SIZE, MMU_KDATA_FLAGS);
+  minfo("map pgpool L2(%ldMB)\n", PGPOOL_SIZE >> 20);
+  mmu_ln_map_region(2, PGT_L2_VBDDR, PGPOOL_START, PGPOOL_START,
+                   PGPOOL_SIZE, K230_DAT_FLAGS);
+
+#ifdef CONFIG_RPTUN
+  uintptr_t base;
+
+  /* map shared memory, 2MB aligned in either DDR or DEV/SRAM zone */
+
+  minfo("map shmem L2(%dKB)\n", (MMU_SHM_SIZE) >> 10);
+  base = (CONFIG_K230_RPTUN_SHM_ADDR >= 0x80000000) ? PGT_L2_VBDEV
+                                                    : PGT_L2_VBDDR;
+  mmu_ln_map_region(2, base, MMU_SHM_BASE, MMU_SHM_BASE,
+                    MMU_SHM_SIZE, K230_SHM_FLAGS);
+#endif
+
+  /* Connect page tables, two tables can only connect once. */
+
+  minfo("connect L1, L2 and L3\n");
+  mmu_ln_setentry(1, PGT_L1_VBASE, PGT_L2_PBDDR, KFLASH_START, 0);
+  mmu_ln_setentry(1, PGT_L1_VBASE, PGT_L2_PBDEV, MMU_DEV_BASE, 0);
+  mmu_ln_setentry(1, PGT_L1_VBASE, PGT_L2_PBINT, MMU_INT_BASE, 0);
+  mmu_ln_setentry(2, PGT_L2_VBDDR, PGT_L3_PBDDR, KFLASH_START, 0);
+
+  /* dump page tables */
+
+#ifdef DEBUG_MM
+  dump_pgtable(m_l1_pgtable, PGT_L1_SIZE, "L1");
+  dump_pgtable(m_l2_pgt_dev, PGT_L2_SIZE, "L2_DEV");
+  dump_pgtable(m_l2_pgt_int, PGT_L2_SIZE, "L2_INT");
+  dump_pgtable(m_l2_pgt_ddr, PGT_L2_SIZE, "L2_DDR");
+  dump_pgtable(m_l3_pgt_ddr, PGT_L3_SIZE, "L3_DDR");
+#else
+  UNUSED(dump_pgtable);
 #endif
 }
 
@@ -302,8 +255,6 @@ void k230_mm_init(void)
 
   k230_kernel_mappings();
 
-  /* Enable MMU (note: system is still in M-mode) */
-
-  binfo("mmu_enable: satp=%" PRIuPTR "\n", g_kernel_pgt_pbase);
+  minfo("mmu_enable: satp=%lx\n", g_kernel_pgt_pbase);
   mmu_enable(g_kernel_pgt_pbase, 0);
 }

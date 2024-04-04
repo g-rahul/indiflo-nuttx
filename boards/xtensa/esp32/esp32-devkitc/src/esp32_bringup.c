@@ -161,8 +161,8 @@
 #  include "esp32_max6675.h"
 #endif
 
-#ifdef CONFIG_ESP32_RMT
-#  include "esp32_rmt.h"
+#ifdef CONFIG_DAC
+#  include "esp32_board_dac.h"
 #endif
 
 #include "esp32-devkitc.h"
@@ -329,6 +329,14 @@ int esp32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
              ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP32_OPENETH
+  ret = esp32_openeth_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize Open ETH ethernet.\n");
     }
 #endif
 
@@ -637,11 +645,11 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_RMT
-  ret = board_rmt_initialize(RMT_CHANNEL, RMT_OUTPUT_PIN);
+#ifdef CONFIG_DAC
+  ret = board_dac_initialize(CONFIG_ESP32_DAC_DEVPATH);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: board_rmt_initialize() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: board_dac_initialize(0) failed: %d\n", ret);
     }
 #endif
 

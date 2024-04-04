@@ -24,20 +24,22 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
 #include <nuttx/init.h>
 #include <nuttx/arch.h>
 #include <nuttx/serial/uart_16550.h>
+#include <nuttx/serial/uart_rpmsg.h>
 #include <arch/board/board.h>
 
 #include "riscv_internal.h"
 #include "chip.h"
 
-#ifdef CONFIG_BUILD_KERNEL
-#  include "k230_mm_init.h"
+#ifdef CONFIG_BUILD_PROTECTED
+#  include "k230_userspace.h"
 #endif
 
-#ifdef CONFIG_DEVICE_TREE
-#  include <nuttx/fdt.h>
+#ifdef CONFIG_BUILD_KERNEL
+#  include "k230_mm_init.h"
 #endif
 
 /****************************************************************************
@@ -55,32 +57,45 @@
 #endif
 
 /****************************************************************************
- * Extern Function Declarations
- ****************************************************************************/
-
-#ifdef CONFIG_BUILD_KERNEL
-extern void __trap_vec(void);
-extern void __trap_vec_m(void);
-extern void up_mtimer_initialize(void);
-#endif
-
-/****************************************************************************
  * Name: k230_clear_bss
  ****************************************************************************/
 
-void k230_clear_bss(void)
+static void k230_clear_bss(void)
 {
   uint32_t *dest;
 
-  /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
-   * certain that there are no issues with the state of global variables.
-   */
+  /* Doing this inline just to be sure on the state of global variables. */
 
   for (dest = (uint32_t *)_sbss; dest < (uint32_t *)_ebss; )
     {
       *dest++ = 0;
     }
 }
+
+#ifndef CONFIG_BUILD_KERNEL
+/****************************************************************************
+ * Name: k230_copy_init_data
+ ****************************************************************************/
+
+static void k230_copy_init_data(void)
+{
+  const uint32_t *src;
+  uint32_t *dest;
+
+  /* Move the initialized data from their temporary holding spot at FLASH
+   * into the correct place in SRAM.  The correct place in SRAM is given
+   * by _sdata and _edata.  The temporary location is in FLASH at the
+   * end of all of the other read-only data (.text, .rodata) at _eronly.
+   */
+
+  for (src = (const uint32_t *)_eronly,
+       dest = (uint32_t *)_sdata; dest < (uint32_t *)_edata;
+      )
+    {
+      *dest++ = *src++;
+    }
+}
+#endif
 
 /****************************************************************************
  * Public Data
@@ -100,12 +115,27 @@ uintptr_t g_idle_topstack = K230_IDLESTACK_TOP;
  * Name: k230_start
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_KERNEL
-void k230_start_s(int mhartid, const char *dtb)
-#else
 void k230_start(int mhartid, const char *dtb)
-#endif
 {
+  if (0 == mhartid)
+    {
+      k230_clear_bss();
+
+#ifdef CONFIG_BUILD_KERNEL
+      riscv_percpu_add_hart(mhartid);
+#else
+      k230_copy_init_data();
+#endif
+    }
+
+#ifndef CONFIG_BUILD_KERNEL
+    k230_hart_init();
+#endif
+
+  /* Disable MMU */
+
+  WRITE_CSR(satp, 0x0);
+
   /* Configure FPU */
 
   riscv_fpuconfig();
@@ -114,14 +144,6 @@ void k230_start(int mhartid, const char *dtb)
     {
       goto cpux;
     }
-
-#ifndef CONFIG_BUILD_KERNEL
-  k230_clear_bss();
-#endif
-
-#ifdef CONFIG_DEVICE_TREE
-  fdt_register(dtb);
-#endif
 
   showprogress('A');
 
@@ -133,9 +155,11 @@ void k230_start(int mhartid, const char *dtb)
 
   /* Do board initialization */
 
-#ifdef CONFIG_BUILD_KERNEL
-  /* Setup page tables for kernel and enable MMU */
+#ifdef CONFIG_BUILD_PROTECTED
+  k230_userspace();
+#endif
 
+#ifdef CONFIG_BUILD_KERNEL
   k230_mm_init();
 #endif
 
@@ -157,83 +181,25 @@ cpux:
     }
 }
 
-#ifdef CONFIG_BUILD_KERNEL
-
-/****************************************************************************
- * Name: k230_start
- ****************************************************************************/
-
-void k230_start(int mhartid, const char *dtb)
-{
-  /* NOTE: still in M-mode */
-
-  if (0 == mhartid)
-    {
-      k230_clear_bss();
-
-      /* Initialize the per CPU areas */
-
-      riscv_percpu_add_hart(mhartid);
-    }
-
-  /* Disable MMU and enable PMP */
-
-  WRITE_CSR(satp, 0x0);
-  WRITE_CSR(pmpaddr0, 0x3fffffffffffffull);
-  WRITE_CSR(pmpcfg0, 0xf);
-
-  /* Set exception and interrupt delegation for S-mode */
-
-  WRITE_CSR(medeleg, 0xffff);
-  WRITE_CSR(mideleg, 0xffff);
-
-  /* Allow to write satp from S-mode */
-
-  CLEAR_CSR(mstatus, MSTATUS_TVM);
-
-  /* Set mstatus to S-mode and enable SUM */
-
-  CLEAR_CSR(mstatus, ~MSTATUS_MPP_MASK);
-  SET_CSR(mstatus, MSTATUS_MPPS | SSTATUS_SUM);
-
-  /* Set the trap vector for S-mode */
-
-  WRITE_CSR(stvec, (uintptr_t)__trap_vec);
-
-  /* Set the trap vector for M-mode */
-
-  WRITE_CSR(mtvec, (uintptr_t)__trap_vec_m);
-
-  if (0 == mhartid)
-    {
-      /* Only the primary CPU needs to initialize mtimer
-       * before entering to S-mode
-       */
-
-      up_mtimer_initialize();
-    }
-
-  /* Set mepc to the entry */
-
-  WRITE_CSR(mepc, (uintptr_t)k230_start_s);
-
-  /* Set a0 to mhartid and a1 to dtb explicitly and enter to S-mode */
-
-  asm volatile (
-      "mv a0, %0 \n"
-      "mv a1, %1 \n"
-      "mret \n"
-      :: "r" (mhartid), "r" (dtb)
-  );
-}
-#endif
-
 void riscv_earlyserialinit(void)
 {
+#ifdef CONFIG_16550_UART
   u16550_earlyserialinit();
+#endif
 }
 
 void riscv_serialinit(void)
 {
+#ifdef CONFIG_16550_UART
   u16550_serialinit();
+#endif
 }
+
+#ifdef CONFIG_RPMSG_UART_CONSOLE
+int up_putc(int ch)
+{
+  /* place holder for now */
+
+  return ch;
+}
+#endif

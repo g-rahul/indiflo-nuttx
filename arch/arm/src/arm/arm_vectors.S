@@ -397,7 +397,7 @@ arm_vectordata:
 
 	mov	fp, #0			/* Init frame pointer */
 	mov	r0, sp			/* Get r0=xcp */
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 	mrc	p15, 0, r1, c6, c0, 0	/* Get R1=FAR */
 	mrc	p15, 0, r2, c5, c0, 0	/* Get r2=FSR */
 #endif
@@ -635,6 +635,22 @@ arm_vectorundefinsn:
 arm_vectorfiq:
 	subs	pc, lr, #4
 	.size	arm_vectorfiq, . - arm_vectorfiq
+
+/****************************************************************************
+ *  Name: arm_vectoraddrexcptn
+ *
+ * Description:
+ *   Shouldn't happen.  This exception handler is in a separate file from
+ *   other vector handlers because some processors do not support the
+ *   Address Exception vector.
+ *
+ ****************************************************************************/
+
+	.globl	arm_vectoraddrexcptn
+	.type	arm_vectoraddrexcptn, %function
+arm_vectoraddrexcptn:
+	b		arm_vectoraddrexcptn
+	.size	arm_vectoraddrexcptn, . - arm_vectoraddrexcptn
 
 /****************************************************************************
  *  Name: g_intstackalloc/g_intstacktop
