@@ -69,6 +69,7 @@
  * Private Types
  ****************************************************************************/
 
+
 #if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
 
 struct ota_partition_s
@@ -84,7 +85,9 @@ struct ota_partition_s
  * Private Function Prototypes
  ****************************************************************************/
 
+
 #if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
+
 static struct mtd_dev_s *progmem_alloc_mtdpart(uint32_t mtd_offset,
                                                    uint32_t mtd_size);
 static int init_ota_partitions(void);
@@ -95,6 +98,7 @@ static int init_ota_partitions(void);
  ****************************************************************************/
 
 static struct mtd_dev_s *g_progmem_mtd;
+
 
 #if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
 static const struct ota_partition_s g_ota_partition_table[] =
@@ -120,6 +124,7 @@ static const struct ota_partition_s g_ota_partition_table[] =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
 
 #if defined(CONFIG_SOC_PROGMEM_OTA_PARTITION)
 
@@ -209,7 +214,9 @@ static int init_ota_partitions(void)
 
   return ret;
 }
+
 #endif /* CONFIG_SOC_PROGMEM_OTA_PARTITION */
+
 
 /****************************************************************************
  * Public Functions
@@ -241,6 +248,7 @@ int stm32_progmem_init(void)
     }
 
 #ifdef CONFIG_SOC_PROGMEM_OTA_PARTITION
+
   ret = init_ota_partitions();
   if (ret < 0)
     {
