@@ -29,6 +29,8 @@
 
 #ifndef __ASSEMBLY__
 #  include <nuttx/arch.h>
+#  include <arch/irq.h>
+#  include <arch/imx9/chip.h>
 #endif
 
 /****************************************************************************

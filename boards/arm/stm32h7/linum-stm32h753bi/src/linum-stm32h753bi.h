@@ -36,7 +36,7 @@
 
 /* Configuration ************************************************************/
 
-/* LED */
+/* LED of board */
 
 #define GPIO_LD1       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
                         GPIO_OUTPUT_SET | GPIO_PORTG | GPIO_PIN2)
