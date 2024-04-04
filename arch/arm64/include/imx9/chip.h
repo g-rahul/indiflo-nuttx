@@ -59,6 +59,8 @@
 
 #define MPID_TO_CLUSTER_ID(mpid)  ((mpid) & ~0xff)
 
+#define IMX9_GPIO_NPORTS          4
+
 #endif
 
 /****************************************************************************
