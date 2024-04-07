@@ -221,6 +221,8 @@ int stm32_flash_writeprotect(size_t page, bool enabled)
 
 size_t up_progmem_pagesize(size_t page)
 {
+
+#if 0
   static const size_t page_sizes[STM32_FLASH_NPAGES] = STM32_FLASH_SIZES;
 
   if (page >= sizeof(page_sizes) / sizeof(*page_sizes))
@@ -231,6 +233,8 @@ size_t up_progmem_pagesize(size_t page)
     {
       return page_sizes[page];
     }
+#endif
+  return FLASH_PAGE_SIZE;
 }
 
 ssize_t up_progmem_getpage(size_t addr)
@@ -280,7 +284,7 @@ size_t up_progmem_getaddress(size_t page)
 
 size_t up_progmem_neraseblocks(void)
 {
-  return STM32_FLASH_NPAGES;
+  return PROGMEM_NBLOCKS;
 }
 
 bool up_progmem_isuniform(void)
@@ -317,7 +321,13 @@ ssize_t up_progmem_ispageerased(size_t page)
   return bwritten;
 }
 
-ssize_t up_progmem_eraseblock(size_t block)
+
+size_t up_progmem_erasesize(size_t block)
+{
+  return FLASH_SECTOR_SIZE;
+}
+
+static ssize_t progmem_eraseblock_discrete(size_t block)
 {
   int ret;
 
@@ -358,6 +368,32 @@ ssize_t up_progmem_eraseblock(size_t block)
     {
       return -EIO; /* failure */
     }
+}
+
+ssize_t up_progmem_eraseblock(size_t block)
+{
+  int ret = 0;
+  size_t i = 0;
+  size_t merge_blk_cnt = FLASH_MERGE_BLK_COUNT;
+
+  /* Erase combined HW sectors for block index < 5 */
+  if (block < merge_blk_cnt)
+  {
+    for (i=0; i < merge_blk_cnt; i++)
+    {
+      ret = progmem_eraseblock_discrete(i);
+      if (ret < 0)
+      {
+        return ret;
+      }
+    }
+  }
+  else
+  {
+    return progmem_eraseblock_discrete(block);
+  }
+
+  return ret;
 }
 
 ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
