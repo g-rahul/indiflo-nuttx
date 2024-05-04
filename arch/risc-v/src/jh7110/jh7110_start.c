@@ -53,10 +53,11 @@ extern void __trap_vec(void);
  ****************************************************************************/
 
 /* NOTE: g_idle_topstack needs to point the top of the idle stack
- * for CPU0 and this value is used in up_initial_state()
+ * for last CPU and this value is used in up_initial_state()
  */
 
-uintptr_t g_idle_topstack = JH7110_IDLESTACK_TOP;
+uintptr_t g_idle_topstack = JH7110_IDLESTACK_BASE +
+                              SMP_STACK_SIZE * CONFIG_SMP_NCPUS;
 
 /****************************************************************************
  * Public Functions
@@ -139,6 +140,10 @@ void jh7110_start(int mhartid)
     {
       jh7110_clear_bss();
 
+      /* Setup base stack */
+
+      riscv_set_basestack(JH7110_IDLESTACK_BASE, SMP_STACK_SIZE);
+
       /* Initialize the per CPU areas */
 
       riscv_percpu_add_hart(mhartid);
@@ -146,11 +151,11 @@ void jh7110_start(int mhartid)
 
   /* Disable MMU */
 
-  WRITE_CSR(satp, 0x0);
+  WRITE_CSR(CSR_SATP, 0x0);
 
   /* Set the trap vector for S-mode */
 
-  WRITE_CSR(stvec, (uintptr_t)__trap_vec);
+  WRITE_CSR(CSR_STVEC, (uintptr_t)__trap_vec);
 
   /* Start S-mode */
 

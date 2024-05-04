@@ -55,5 +55,41 @@
 int imx9_bringup(void);
 #endif
 
+/****************************************************************************
+ * Name: imx9_pwm_setup
+ *
+ * Description:
+ *   Initialize PWM outputs
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_PWM)
+int imx9_pwm_setup(void);
+#endif
+
+/****************************************************************************
+ * Name: imx9_i2c_setup
+ *
+ * Description:
+ *   Initialize I2C devices and driver
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_I2C_DRIVER)
+int imx9_i2c_initialize(void);
+#endif
+
+/****************************************************************************
+ * Name: imx9_spi_setup
+ *
+ * Description:
+ *   Initialize SPI devices and driver
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SPI_DRIVER)
+int imx9_spi_initialize(void);
+#endif
+
 #endif /* __ASSEMBLY__ */
 #endif /* __BOARDS_ARM64_IMX9_IMX93_EVK_SRC_IMX93_EVK_H */

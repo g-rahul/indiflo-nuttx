@@ -34,6 +34,10 @@ Build and install ``qemu``::
   $ make
   $ sudo make install
 
+QEMU 7.2.9 or later and OpenSBI v1.1 or later (usually shipped with QEMU) is required, to support RISC-V "Sstc" Extension. It is also recommended to use the latest QEMU and OpenSBI.
+
+For users who wish to use their own OpenSBI, please refer to `OpenSBI repository <https://github.com/riscv-software-src/opensbi>`_.
+
 Configurations
 ==============
 
@@ -65,12 +69,25 @@ And, for 64-bit configurations::
 
     $ qemu-system-riscv64 -semihosting -M virt,aclint=on -cpu rv64 -smp 8 -bios none -kernel nuttx -nographic
 
+If testing with kernel build, remove the ``-bios none`` option. Kernel build
+requires SBI to function properly.
 
 citest
 ------
 
 This configuration is the default configuration intended to be used by the automated
 testing on CI of 32-bit RISC-V using QEMU.
+
+To run it with QEMU, use the following command::
+
+    $ qemu-system-riscv32 -semihosting -M virt -cpu rv32 \
+      -drive index=0,id=userdata,if=none,format=raw,file=./fatfs.img \
+      -device virtio-blk-device,bus=virtio-mmio-bus.0,drive=userdata \
+      -bios none -kernel nuttx -nographic
+
+To run the CI scripts, use the following command::
+
+    $ ./nuttx/boards/risc-v/qemu-rv/rv-virt/configs/citest/run
 
 citest64
 --------
@@ -124,7 +141,7 @@ To run it with QEMU, use the following command::
       -device virtio-net-device,netdev=u1,bus=virtio-mmio-bus.2 \
       -drive file=./mydisk-1gb.img,if=none,format=raw,id=hd \
       -device virtio-blk-device,bus=virtio-mmio-bus.3,drive=hd \
-      -bios none -kernel ./nuttx/nuttx -nographic
+      -kernel ./nuttx/nuttx -nographic
 
 knetnsh64_smp
 -------------
@@ -187,7 +204,7 @@ A ROMFS image is generated and linked to the kernel. This requires re-running ``
 
 To run it, use the following command::
 
-    $ qemu-system-riscv32 -M virt,aclint=on -cpu rv32 -smp 8 -bios none -kernel nuttx -nographic
+    $ qemu-system-riscv32 -M virt,aclint=on -cpu rv32 -smp 8 -kernel nuttx -nographic
 
 In `nsh`, applications can be run from the `/system/bin` directory::
 

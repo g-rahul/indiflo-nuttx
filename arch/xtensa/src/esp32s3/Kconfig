@@ -19,12 +19,26 @@ config ARCH_CHIP_ESP32S3WROOM1
 		Generic module with an embedded ESP32-S3.
 
 config ARCH_CHIP_ESP32S3WROOM2
-	bool "ESP32-S3-WROOM-2"
+	bool "ESP32-S3-WROOM-2 with 16MB Flash"
 	select ESP32S3_FLASH_16M
 	select ESP32S3_PSRAM_8M
 	select ARCH_HAVE_I2CRESET
 	---help---
 		Generic module with an embedded ESP32-S3.
+
+		Note: depending on the modules, WROOM2 has 16MB flash
+		(ESP32-S3-WROOM-2-N16R8V) or 32MB flash. (ESP32-S3-WROOM-2-N32R8V)
+
+config ARCH_CHIP_ESP32S3WROOM2_32M
+	bool "ESP32-S3-WROOM-2 with 32MB Flash"
+	select ESP32S3_FLASH_32M
+	select ESP32S3_PSRAM_8M
+	select ARCH_HAVE_I2CRESET
+	---help---
+		Generic module with an embedded ESP32-S3.
+
+		Note: depending on the modules, WROOM2 has 16MB flash
+		(ESP32-S3-WROOM-2-N16R8V) or 32MB flash. (ESP32-S3-WROOM-2-N32R8V)
 
 config ARCH_CHIP_ESP32S3MINI1
 	bool "ESP32-S3-MINI-1"
@@ -38,6 +52,10 @@ endchoice # ESP32-S3 Chip Selection
 config ESPRESSIF_CHIP_SERIES
 	string
 	default "esp32s3"
+
+config ESPRESSIF_NUM_CPUS
+	int
+	default 2
 
 choice ESP32S3_DEFAULT_CPU_FREQ
 	prompt "CPU frequency"
@@ -366,26 +384,24 @@ config ESP32S3_I2S0_SAMPLE_RATE
 config ESP32S3_I2S0_BCLKPIN
 	int "I2S0 BCLK pin"
 	default 4
-	range 0 33 if ESP32S3_I2S0_ROLE_MASTER
-	range 0 39 if ESP32S3_I2S0_ROLE_SLAVE
+	range 0 48
 
 config ESP32S3_I2S0_WSPIN
 	int "I2S0 WS pin"
 	default 5
-	range 0 33 if ESP32S3_I2S0_ROLE_MASTER
-	range 0 39 if ESP32S3_I2S0_ROLE_SLAVE
+	range 0 48
 
 config ESP32S3_I2S0_DINPIN
 	int "I2S0 DIN pin"
 	depends on ESP32S3_I2S0_RX
 	default 19
-	range 0 39
+	range 0 48
 
 config ESP32S3_I2S0_DOUTPIN
 	int "I2S0 DOUT pin"
 	depends on ESP32S3_I2S0_TX
 	default 18
-	range 0 33
+	range 0 48
 
 config ESP32S3_I2S0_MCLK
 	bool "Enable I2S Master Clock"
@@ -398,7 +414,7 @@ config ESP32S3_I2S0_MCLKPIN
 	int "I2S MCLK pin"
 	depends on ESP32S3_I2S0_MCLK
 	default 0
-	range 0 39
+	range 0 48
 
 endif #ESP32S3_I2S0
 
@@ -478,26 +494,24 @@ config ESP32S3_I2S1_SAMPLE_RATE
 config ESP32S3_I2S1_BCLKPIN
 	int "I2S1 BCLK pin"
 	default 22
-	range 0 33 if ESP32S3_I2S1_ROLE_MASTER
-	range 0 39 if ESP32S3_I2S1_ROLE_SLAVE
+	range 0 48
 
 config ESP32S3_I2S1_WSPIN
 	int "I2S1 WS pin"
 	default 23
-	range 0 33 if ESP32S3_I2S1_ROLE_MASTER
-	range 0 39 if ESP32S3_I2S1_ROLE_SLAVE
+	range 0 48
 
 config ESP32S3_I2S1_DINPIN
 	int "I2S1 DIN pin"
 	depends on ESP32S3_I2S1_RX
 	default 26
-	range 0 39
+	range 0 48
 
 config ESP32S3_I2S1_DOUTPIN
 	int "I2S1 DOUT pin"
 	depends on ESP32S3_I2S1_TX
 	default 25
-	range 0 33
+	range 0 48
 
 config ESP32S3_I2S1_MCLK
 	bool "Enable I2S Master Clock"
@@ -510,7 +524,7 @@ config ESP32S3_I2S1_MCLKPIN
 	int "I2S MCLK pin"
 	depends on ESP32S3_I2S1_MCLK
 	default 1
-	range 0 39
+	range 0 48
 
 endif #ESP32S3_I2S1
 
@@ -534,6 +548,7 @@ config ESP32S3_WDT
 
 config ESP32S3_EFUSE
 	bool "EFUSE support"
+	select EFUSE
 	default n
 	---help---
 		Enable ESP32-S3 efuse support.
@@ -1884,22 +1899,20 @@ config ESP32S3_SPI_FLASH_SUPPORT_PSRAM_STACK
 		can do SPI Flash read/write/erase/map/unmap. Otherwise,
 		it may cause exception, the root cause is as following:
 			1. When operating SPI flash, cache is also disable,
-		   		then software can't access PSRAM by data cache.
+				then software can't access PSRAM by data cache.
 			2. SPI flash read/write/erase functions have instruction like
 				stack-pop and stack-push which may use stack buffer which is
-		   		PSRAM space or load/store temp variables which locate in PSRAM space too.
+				PSRAM space or load/store temp variables which locate in PSRAM space too.
 			3. Once operation in step 2 triggers, CPU will trigger exception.
 		So related SPI flash functions should be sent and run in tasks which use SRAM as task stack.
-
-if ESP32S3_APP_FORMAT_LEGACY
 
 comment "Partition Table configuration"
 
 config ESP32S3_PARTITION_TABLE
 	bool "Create MTD partitions from Partition Table"
 	default n
-	depends on ESP32S3_MTD && ESP32S3_APP_FORMAT_LEGACY
-	select ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
+	depends on ESP32S3_MTD
+	select ESP32S3_APP_FORMAT_LEGACY
 	---help---
 		Decode partition table and initialize partitions as MTD.
 
@@ -1907,8 +1920,6 @@ config ESP32S3_PARTITION_MOUNTPT
 	string "Partition mount point"
 	default "/dev/esp/partition/"
 	depends on ESP32S3_PARTITION_TABLE
-
-endif # ESP32S3_APP_FORMAT_LEGACY
 
 endif # ESP32S3_SPIFLASH
 
@@ -2177,38 +2188,26 @@ endmenu
 
 menu "Bootloader and Image Configuration"
 
-config ESP32S3_APP_FORMAT_LEGACY
+config ESPRESSIF_SIMPLE_BOOT
 	bool
-	default y if !ESP32S3_APP_FORMAT_MCUBOOT
 	depends on !ESP32S3_APP_FORMAT_MCUBOOT
-	---help---
-		This is the legacy application image format, as supported by the ESP-IDF
-		2nd stage bootloader.
+	depends on !ESP32S3_APP_FORMAT_LEGACY
+	default y
 
 config ESP32S3_APP_FORMAT_MCUBOOT
 	bool "Enable MCUboot-bootable format"
 	depends on !MCUBOOT_BOOTLOADER
+	default n
 	select ESP32S3_HAVE_OTA_PARTITION
-	select ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
 	---help---
 		Enables the Espressif port of MCUboot to be used as 2nd stage bootloader.
 
-config ESP32S3_BOOTLOADER_DOWNLOAD_PREBUILT
-	bool
-	default y if !ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
-	depends on !ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
+config ESP32S3_APP_FORMAT_LEGACY
+	bool "Enable legacy boot format"
+	default y if BUILD_PROTECTED
 	---help---
-		The build system will download the prebuilt binaries from
-		https://github.com/espressif/esp-nuttx-bootloader according to the chosen
-		Application Image Format (ESP32S3_APP_FORMAT_LEGACY or ESP32S3_APP_FORMAT_MCUBOOT)
-
-config ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
-	bool "Build binaries from source"
-	---help---
-		The build system will build all the required binaries from source. It will clone
-		the https://github.com/espressif/esp-nuttx-bootloader repository and build a
-		custom bootloader according to the chosen Application Image Format
-		(ESP32S3_APP_FORMAT_LEGACY or ESP32S3_APP_FORMAT_MCUBOOT) and partition information.
+		This is the legacy application image format, as supported by the ESP-IDF
+		2nd stage bootloader.
 
 choice
 	prompt "Target slot for image flashing"
@@ -2254,7 +2253,6 @@ config ESP32S3_CUSTOM_PARTITION_TABLE_OFFSET
 	bool "Customize partition table offset"
 	default n
 	depends on ESP32S3_APP_FORMAT_LEGACY
-	select ESP32S3_BOOTLOADER_BUILD_FROM_SOURCE
 	---help---
 		Enable to select the offset of the partition table in the flash.
 

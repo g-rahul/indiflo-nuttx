@@ -93,6 +93,10 @@ void __litex_start(int hart_index, const void * fdt, int arg)
       *dest++ = 0;
     }
 
+  /* Setup base stack */
+
+  riscv_set_basestack(LITEX_IDLESTACK_BASE, SMP_STACK_SIZE);
+
   /* Move the initialized data section from his temporary holding spot in
    * FLASH into the correct place in SRAM.  The correct place in SRAM is
    * give by _sdata and _edata.  The temporary location is in FLASH at the
@@ -119,7 +123,7 @@ void __litex_start(int hart_index, const void * fdt, int arg)
       fdt_register((const char *)CONFIG_LITEX_FDT_MEMORY_ADDRESS);
     }
 
-#ifdef CONFIG_LITEX_CORE_VEXRISCV_SMP
+#ifdef CONFIG_RISCV_PERCPU_SCRATCH
   riscv_percpu_add_hart(0);
 #endif
 

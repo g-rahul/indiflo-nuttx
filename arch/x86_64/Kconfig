@@ -30,6 +30,8 @@ config ARCH_INTEL64
 	select ARCH_HAVE_SSE41
 	select ARCH_HAVE_SSE42
 	select ARCH_HAVE_SSE4A
+	select ARCH_ICACHE
+	select ARCH_DCACHE
 	---help---
 		Intel x86_64 architecture
 
@@ -107,8 +109,8 @@ config MULTBOOT2_FB_TERM
 	bool "Multiboot2 framebuffer terminal"
 	default n
 	depends on NXFONTS
-    ---help---
-	Enable a framebuffer terminal for early debug printing
+	---help---
+		Enable a framebuffer terminal for early debug printing
 
 endif # ARCH_MULTIBOOT2
 

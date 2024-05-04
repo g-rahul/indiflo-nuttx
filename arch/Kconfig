@@ -133,6 +133,7 @@ config ARCH_X86_64
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU
 	select ARCH_HAVE_TESTSET
+	select ARCH_HAVE_CUSTOMOPT
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
 	---help---
 		x86-64 architectures.
@@ -722,6 +723,10 @@ config ARCH_VMA_MAPPING
 	bool "Support runtime memory mapping into SHM area"
 	default n
 
+config ARCH_KVMA_MAPPING
+	bool
+	default n
+
 config ARCH_SHM_VBASE
 	hex "Shared memory base"
 	depends on ARCH_VMA_MAPPING
@@ -730,7 +735,7 @@ config ARCH_SHM_VBASE
 
 config ARCH_KMAP_VBASE
 	hex "Kernel dynamic virtual mappings base"
-	depends on MM_KMAP
+	depends on ARCH_KVMA_MAPPING
 	---help---
 		The virtual address of the beginning of the kernel dynamic mapping
 		region.
@@ -765,41 +770,27 @@ config ARCH_SHM_MAXREGIONS
 	int "Max shared memory regions"
 	default 1
 	---help---
-		The maximum number of regions that can allocated for the shared
-		memory space.  This hard-coded value permits static allocation of
+		The maximum number of regions that can be used with SysV shared
+		memory interface. This hard-coded value permits static allocation of
 		the shared memory data structures and serves no other purpose.
 		Default is 1.
 
-		The size of the virtual shared memory address space is then
-		determined by the product of the maximum number of regions, the
-		maximum number of pages per region, and the configured size of
-		each page.
-
 config ARCH_SHM_NPAGES
-	int "Max shared memory pages"
+	int "Max size of userspace VM mapping in pages"
 	default 1
 	---help---
-		The maximum number of pages that can allocated per region for the shared memory
-		region. Default is 1.
-
-		The size of the virtual shared memory address space is then
-		determined by the product of the maximum number of regions, the
-		maximum number of pages per region, and the configured size of
-		each page.
+		The max size of the virtual memory region for shared memory,
+		userspace device mappings etc.
 
 endif # ARCH_VMA_MAPPING
 
 config ARCH_KMAP_NPAGES
 	int "Max kernel dynamic mapping pages"
 	default 1
+	depends on ARCH_KVMA_MAPPING
 	---help---
 		The maximum amount of pages that a kernel can use for dynamically
 		mapping physical pages to itself.
-
-		The size of the virtual shared memory address space is then
-		determined by the product of the maximum number of regions, the
-		maximum number of pages per region, and the configured size of
-		each page.
 
 config ARCH_STACK_DYNAMIC
 	bool "Dynamic user stack"

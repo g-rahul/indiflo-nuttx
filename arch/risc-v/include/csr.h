@@ -135,9 +135,18 @@
 #define CSR_STVAL           0x143
 #define CSR_SIP             0x144
 
+/* Supervisor Environment Configuration Registers */
+
+#define CSR_SENVCFG         0x10a
+
 /* Supervisor Protection and Translation Registers */
 
 #define CSR_SATP            0x180
+
+/* Supervisor Time Registers */
+
+#define CSR_STIMECMP        0x14d
+#define CSR_STIMECMPH       0x15d
 
 /* Machine Information Registers */
 
@@ -163,6 +172,11 @@
 #define CSR_MCAUSE          0x342
 #define CSR_MTVAL           0x343
 #define CSR_MIP             0x344
+
+/* Machine Environment Configuration Registers */
+
+#define CSR_MENVCFG         0x30a
+#define CSR_MENVCFGH        0x31a
 
 /* Machine Protection and Translation */
 
@@ -286,16 +300,33 @@
 
 /* Debug/Trace Registers */
 
-#define CSR_TSELECT         0x7a0
-#define CSR_TDATA1          0x7a1
-#define CSR_TDATA2          0x7a2
-#define CSR_TDATA3          0x7a3
+#define CSR_TSELECT         0x7a0 /* Trigger Select */
+#define CSR_TDATA1          0x7a1 /* Trigger Data 1 */
+#define CSR_TDATA2          0x7a2 /* Trigger Data 2 */
+#define CSR_TDATA3          0x7a3 /* Trigger Data 3 */
+#define CSR_TINFO           0x7a4 /* Trigger Info */
+#define CSR_TCONTROL        0x7a5 /* Trigger Control */
+#define CSR_MCONTEXT        0x7a8 /* Machine Context */
+#define CSR_MSCONTEXT       0x7aa /* Machine Supervisor Context */
+#define CSR_SCONTEXT        0x5a8 /* Supervisor Context */
+#define CSR_HCONTEXT        0x5aa /* Hypervisor Context */
 
 /* Debug interface CSRs */
 
-#define CSR_DCSR            0x7b0
-#define CSR_DPC             0x7b1
-#define CSR_DSCRATCH        0x7b2
+#define CSR_DCSR            0x7b0 /* Debug Control and Status */
+#define CSR_DPC             0x7b1 /* Debug PC */
+#define CSR_DSCRATCH0       0x7b2 /* Debug Scratch 0 */
+#define CSR_DSCRATCH1       0x7b3 /* Debug Scratch 1 */
+
+/* Vector CSRs */
+
+#define CSR_VSTART          0x008 /* Vector Start Position */
+#define CSR_VXSAT           0x009 /* Fixed-Point Saturate Flag */
+#define CSR_VXRM            0x00a /* Fixed-Point Rounding Mode */
+#define CSR_VCSR            0x00f /* Vector Control and Status */
+#define CSR_VL              0xc20 /* Vector Length */
+#define CSR_VTYPE           0xc21 /* Vector Data Type */
+#define CSR_VLENB           0xc22 /* Vector Length in Bytes (VLEN/8) */
 
 /* In mstatus register */
 
@@ -337,6 +368,23 @@
 #define MSTATUS_WPRI        (UINT64_C(0x1ffffff) << 38 | UINT64_C(0x1ff) << 23 | 0x15)
 #endif
 
+/* In menvcfg register */
+#define MENVCFG_FIOM        (0x1 << 0)
+#define MENVCFG_CBIE        (0x3 << 4)
+#define MENVCFG_CBIE_ILL    (0x0 << 4)
+#define MENVCFG_CBIE_FLUSH  (0x1 << 4)
+#define MENVCFG_CBIE_INV    (0x3 << 4)
+#define MENVCFG_CBCFE       (0x1 << 6)
+#define MENVCFG_CBZE        (0x1 << 7)
+
+#ifdef CONFIG_ARCH_RV32
+#define MENVCFG_PBMTE       (0x1 << 30)
+#define MENVCFG_STCE        (0x1 << 31)
+#else
+#define MENVCFG_PBMTE       (UINT64_C(0x1) << 62)
+#define MENVCFG_STCE        (UINT64_C(0x1) << 63)
+#endif
+
 /* In mie (machine interrupt enable) register */
 
 #define MIE_SSIE            (0x1 << 1)  /* Supervisor Software Interrupt Enable */
@@ -349,9 +397,11 @@
 /* In mip (machine interrupt pending) register */
 
 #define MIP_SSIP            (0x1 << 1)
+#define MIP_MSIP            (0x1 << 3)
 #define MIP_STIP            (0x1 << 5)
 #define MIP_MTIP            (0x1 << 7)
 #define MIP_SEIP            (0x1 << 9)
+#define MIP_MEIP            (0x1 << 11)
 
 /* In sstatus register (which is a view of mstatus) */
 
@@ -386,6 +436,15 @@
 #define SIP_STIP            MIP_STIP
 #define SIP_SEIP            MIP_SEIP
 
+/* In senvcfg register */
+#define SENVCFG_FIOM        MENVCFG_FIOM
+#define SENVCFG_CBIE        MENVCFG_CBIE
+#define SENVCFG_CBIE_ILL    MENVCFG_CBIE_ILL
+#define SENVCFG_CBIE_FLUSH  MENVCFG_CBIE_FLUSH
+#define SENVCFG_CBIE_INV    MENVCFG_CBIE_INV
+#define SENVCFG_CBCFE       MENVCFG_CBCFE
+#define SENVCFG_CBZE        MENVCFG_CBZE
+
 /* In pmpcfg (PMP configuration) register */
 
 #define PMPCFG_R            (1 << 0)  /* readable ? */
@@ -398,6 +457,40 @@
 #define PMPCFG_A_NAPOT      (3 << 3)  /* naturally aligned power-of-two region */
 #define PMPCFG_A_MASK       (3 << 3)  /* address-matching mode mask */
 #define PMPCFG_L            (1 << 7)  /* locked ? */
+
+/* In mcounteren/scounteren register */
+#define COUNTEREN_CY       (0x1 << 0)
+#define COUNTEREN_TM       (0x1 << 1)
+#define COUNTEREN_IR       (0x1 << 2)
+#define COUNTEREN_HPM3     (0x1 << 3)
+#define COUNTEREN_HPM4     (0x1 << 4)
+#define COUNTEREN_HPM5     (0x1 << 5)
+#define COUNTEREN_HPM6     (0x1 << 6)
+#define COUNTEREN_HPM7     (0x1 << 7)
+#define COUNTEREN_HPM8     (0x1 << 8)
+#define COUNTEREN_HPM9     (0x1 << 9)
+#define COUNTEREN_HPM10    (0x1 << 10)
+#define COUNTEREN_HPM11    (0x1 << 11)
+#define COUNTEREN_HPM12    (0x1 << 12)
+#define COUNTEREN_HPM13    (0x1 << 13)
+#define COUNTEREN_HPM14    (0x1 << 14)
+#define COUNTEREN_HPM15    (0x1 << 15)
+#define COUNTEREN_HPM16    (0x1 << 16)
+#define COUNTEREN_HPM17    (0x1 << 17)
+#define COUNTEREN_HPM18    (0x1 << 18)
+#define COUNTEREN_HPM19    (0x1 << 19)
+#define COUNTEREN_HPM20    (0x1 << 20)
+#define COUNTEREN_HPM21    (0x1 << 21)
+#define COUNTEREN_HPM22    (0x1 << 22)
+#define COUNTEREN_HPM23    (0x1 << 23)
+#define COUNTEREN_HPM24    (0x1 << 24)
+#define COUNTEREN_HPM25    (0x1 << 25)
+#define COUNTEREN_HPM26    (0x1 << 26)
+#define COUNTEREN_HPM27    (0x1 << 27)
+#define COUNTEREN_HPM28    (0x1 << 28)
+#define COUNTEREN_HPM29    (0x1 << 29)
+#define COUNTEREN_HPM30    (0x1 << 30)
+#define COUNTEREN_HPM31    (0x1 << 31)
 
 /****************************************************************************
  * Public Types

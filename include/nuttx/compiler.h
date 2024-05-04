@@ -245,6 +245,7 @@
  */
 
 #  define always_inline_function __attribute__((always_inline,no_instrument_function))
+#  define inline_function __attribute__((always_inline)) inline
 #  define noinline_function __attribute__((noinline))
 
 /* The noinstrument_function attribute informs GCC don't instrument it */
@@ -302,6 +303,7 @@
 #    define malloc_like1(a) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
+#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  else
 #    define fopen_like __attribute__((__malloc__))
 #    define popen_like __attribute__((__malloc__))
@@ -309,6 +311,7 @@
 #    define malloc_like1(a) __attribute__((__malloc__)) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__)) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
+#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  endif
 
 /* Some versions of GCC have a separate __syslog__ format.
@@ -557,6 +560,7 @@
 /* SDCC does not support forced inlining. */
 
 #  define always_inline_function
+#  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
 #  define nooptimiziation_function
@@ -701,6 +705,7 @@
 #  define end_packed_struct
 #  define naked_function
 #  define always_inline_function
+#  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
 #  define nooptimiziation_function
@@ -813,6 +818,7 @@
 #  define reentrant_function
 #  define naked_function
 #  define always_inline_function
+#  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
 #  define nooptimiziation_function
@@ -904,6 +910,7 @@
 #  define reentrant_function
 #  define naked_function
 #  define always_inline_function
+#  define inline_function __forceinline
 #  define noinline_function
 #  define noinstrument_function
 #  define nooptimiziation_function
@@ -1049,6 +1056,7 @@
 #  define reentrant_function
 #  define naked_function
 #  define always_inline_function
+#  define inline_function
 #  define noinline_function
 #  define noinstrument_function
 #  define nooptimiziation_function

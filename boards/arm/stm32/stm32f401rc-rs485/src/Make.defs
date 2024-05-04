@@ -1,5 +1,5 @@
 ############################################################################
-# boards/arm/stm32/smt32f401rc-rs485/src/Make.defs
+# boards/arm/stm32/stm32f401rc-rs485/src/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -57,6 +57,10 @@ endif
 
 ifeq ($(CONFIG_STM32_PWM),y)
 CSRCS += stm32_pwm.c
+endif
+
+ifeq ($(CONFIG_USBMSC),y)
+CSRCS += stm32_usbmsc.c
 endif
 
 DEPPATH += --dep-path board

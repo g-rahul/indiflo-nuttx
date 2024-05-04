@@ -25,12 +25,41 @@ include common/Make.defs
 CHIP_CSRCS = imx9_boot.c imx9_ccm.c imx9_clockconfig.c imx9_gpio.c imx9_iomuxc.c
 
 ifeq ($(CONFIG_ARCH_CHIP_IMX93),y)
-  CHIP_CSRCS += imx9_lpuart.c
-  ifeq ($(CONFIG_ARCH_EARLY_PRINT),y)
-    CHIP_ASRCS = imx93_lowputc.S
-  endif
+  CHIP_CSRCS += imx9_lpuart.c imx9_lowputc.c
 endif
 
 ifeq ($(CONFIG_IMX9_GPIO_IRQ),y)
   CHIP_CSRCS += imx9_gpioirq.c
+endif
+
+ifeq ($(CONFIG_IMX9_FLEXIO_PWM),y)
+  CHIP_CSRCS += imx9_flexio_pwm.c
+endif
+
+ifeq ($(CONFIG_IMX9_TPM_PWM),y)
+  CHIP_CSRCS += imx9_tpm_pwm.c
+endif
+
+ifeq ($(CONFIG_IMX9_USBDEV),y)
+  CHIP_CSRCS += imx9_usbdev.c
+endif
+
+ifeq ($(CONFIG_IMX9_LPI2C),y)
+  CHIP_CSRCS += imx9_lpi2c.c
+endif
+
+ifeq ($(CONFIG_IMX9_LPSPI), y)
+  CHIP_CSRCS += imx9_lpspi.c
+endif
+
+ifeq ($(CONFIG_IMX9_EDMA), y)
+  CHIP_CSRCS += imx9_edma.c
+endif
+
+ifeq ($(CONFIG_IMX9_DMA_ALLOC),y)
+  CHIP_CSRCS += imx9_dma_alloc.c
+endif
+
+ifeq ($(CONFIG_IMX9_ENET),y)
+CHIP_CSRCS += imx9_enet.c
 endif

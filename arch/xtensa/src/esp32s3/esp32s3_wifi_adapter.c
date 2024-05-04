@@ -54,7 +54,7 @@
 #include <nuttx/tls.h>
 
 #include "xtensa.h"
-#include "xtensa_attr.h"
+#include "esp_attr.h"
 #include "hardware/esp32s3_system.h"
 #include "hardware/esp32s3_rtccntl.h"
 #include "hardware/esp32s3_syscon.h"
@@ -109,7 +109,7 @@
 
 #define DEFAULT_LISTEN_INTERVAL CONFIG_EXAMPLE_WIFI_LISTEN_INTERVAL
 
-#define RTC_CLK_CAL_FRACT  19  //!< Number of fractional bits in values returned by rtc_clk_cal
+#define RTC_CLK_CAL_FRACT  19  /* Number of fractional bits in values returned by rtc_clk_cal */
 
 #define ets_timer       _ETSTIMER_
 

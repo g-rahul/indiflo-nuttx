@@ -20,9 +20,9 @@
 
 MEMORY
 {
-    kflash (rx) : ORIGIN = 0x80000000, LENGTH = 4096K   /* w/ cache */
-    ksram (rwx) : ORIGIN = 0x80400000, LENGTH = 4096K   /* w/ cache */
-    pgram (rwx) : ORIGIN = 0x80800000, LENGTH = 4096K   /* w/ cache */
+    kflash (rx) : ORIGIN = 0x80200000, LENGTH = 4096K   /* w/ cache */
+    ksram (rwx) : ORIGIN = 0x80600000, LENGTH = 4096K   /* w/ cache */
+    pgram (rwx) : ORIGIN = 0x80a00000, LENGTH = 4096K   /* w/ cache */
 }
 
 OUTPUT_ARCH("riscv")
@@ -43,6 +43,19 @@ __pgheap_size = LENGTH(pgram);
 SECTIONS
 {
   . = 0x80000000;
+
+  /* where the global variable out-of-bounds detection information located */
+#ifdef CONFIG_MM_KASAN_GLOBAL
+  .kasan.unused :
+  {
+    *(.data..LASANLOC*)
+  }
+  .kasan.global :
+  {
+    KEEP (*(.data..LASAN0))
+    KEEP (*(.data.rel.local..LASAN0))
+  }
+#endif
 
   .text :
     {

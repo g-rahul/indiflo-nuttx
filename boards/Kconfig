@@ -423,7 +423,7 @@ config ARCH_BOARD_FRANZININHO_WIFI
 
 config ARCH_BOARD_ESP32S3_DEVKIT
 	bool "Espressif ESP32-S3 DevKit"
-	depends on ARCH_CHIP_ESP32S3WROOM1 || ARCH_CHIP_ESP32S3MINI1 || ARCH_CHIP_ESP32S3WROOM2
+	depends on ARCH_CHIP_ESP32S3WROOM1 || ARCH_CHIP_ESP32S3MINI1 || ARCH_CHIP_ESP32S3WROOM2 || ARCH_CHIP_ESP32S3WROOM2_32M
 	select ARCH_HAVE_LEDS
 	select ARCH_HAVE_BUTTONS
 	select ARCH_HAVE_IRQBUTTONS if ESP32S3_GPIO_IRQ
@@ -447,7 +447,7 @@ config ARCH_BOARD_ESP32S3_EYE
 
 config ARCH_BOARD_ESP32S3_LCD_EV
 	bool "Espressif ESP32-S3-LCD-EV Board"
-	depends on ARCH_CHIP_ESP32S3WROOM2
+	depends on ARCH_CHIP_ESP32S3WROOM2 || ARCH_CHIP_ESP32S3WROOM2_32M
 	select ARCH_HAVE_LEDS
 	select ARCH_HAVE_BUTTONS
 	select ARCH_HAVE_IRQBUTTONS if ESP32S3_GPIO_IRQ
@@ -465,7 +465,7 @@ config ARCH_BOARD_ESP32S3_LCD_EV
 
 config ARCH_BOARD_ESP32S3_BOX
 	bool "Espressif ESP32-S3-BOX"
-	depends on ARCH_CHIP_ESP32S3WROOM2
+	depends on ARCH_CHIP_ESP32S3WROOM2 || ARCH_CHIP_ESP32S3WROOM2_32M
 	select ARCH_HAVE_LEDS
 	select ARCH_HAVE_BUTTONS
 	select ARCH_HAVE_IRQBUTTONS if ESP32S3_GPIO_IRQ
@@ -1939,6 +1939,16 @@ config ARCH_BOARD_WAVESHARE_RP2040_LCD_1_28
 		This is a port to the Waveshare RP2040 LCD 1.28 board.
 		Support is derived from Raspberry Pi Pico support.
 
+config ARCH_BOARD_W5500_EVB_PICO
+	bool "WIZnet W5500-EVB-Pico board"
+	depends on ARCH_CHIP_RP2040
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		This is a port to the WIZnet W5500-EVB-Pico board.
+		Support is derived from Raspberry Pi Pico support.
+
 config ARCH_BOARD_RX65N
 	bool "RX65N renesas board"
 	depends on ARCH_CHIP_R5F565NEDDFC
@@ -2088,6 +2098,14 @@ config ARCH_BOARD_MR_CANHUBK3
 	---help---
 		This options selects support for NuttX on the NXP MR-CANHUBK3 board
 		featuring the S32K344 Cortex-M7.
+
+config ARCH_BOARD_MPS3_AN547
+	bool "Arm MPS3 AN547"
+	depends on ARCH_CHIP_MPS3_AN547
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		This options selects support for NuttX on the MPS3 AN547
+		board featuring the Cortex-M55.
 
 config ARCH_BOARD_SABRE_6QUAD
 	bool "NXP/Freescale i.MX6 Sabre-6Quad board"
@@ -3198,7 +3216,7 @@ config ARCH_BOARD
 	default "esp32s3-box"               if ARCH_BOARD_ESP32S3_BOX
 	default "esp32c6-devkitc"           if ARCH_BOARD_ESP32C6_DEVKITC
 	default "esp32c6-devkitm"           if ARCH_BOARD_ESP32C6_DEVKITM
-	default "esp32h2-devkit"           	if ARCH_BOARD_ESP32H2_DEVKIT
+	default "esp32h2-devkit"            if ARCH_BOARD_ESP32H2_DEVKIT
 	default "et-stm32-stamp"            if ARCH_BOARD_ET_STM32_STAMP
 	default "tlsr8278adk80d"            if ARCH_BOARD_TLSR8278ADK80D
 	default "ez80f910200kitg"           if ARCH_BOARD_EZ80F910200KITG
@@ -3345,6 +3363,7 @@ config ARCH_BOARD
 	default "adafruit-kb2040"           if ARCH_BOARD_ADAFRUIT_KB2040
 	default "adafruit-qt-py-rp2040"     if ARCH_BOARD_ADAFRUIT_QT_PY_RP2040
 	default "waveshare-rp2040-lcd-1.28" if ARCH_BOARD_WAVESHARE_RP2040_LCD_1_28
+	default "w5500-evb-pico"            if ARCH_BOARD_W5500_EVB_PICO
 	default "rx65n"                     if ARCH_BOARD_RX65N
 	default "rx65n-rsk1mb"              if ARCH_BOARD_RX65N_RSK1MB
 	default "rx65n-rsk2mb"              if ARCH_BOARD_RX65N_RSK2MB
@@ -3357,6 +3376,7 @@ config ARCH_BOARD
 	default "s32k148evb"                if ARCH_BOARD_S32K148EVB
 	default "s32k344evb"                if ARCH_BOARD_S32K344EVB
 	default "mr-canhubk3"               if ARCH_BOARD_MR_CANHUBK3
+	default "mps3-an547"                if ARCH_BOARD_MPS3_AN547
 	default "rv32m1-vega"               if ARCH_BOARD_RV32M1_VEGA
 	default "rv-virt"                   if ARCH_BOARD_QEMU_RV_VIRT
 	default "star64"                    if ARCH_BOARD_JH7110_STAR64
@@ -3469,7 +3489,7 @@ config ARCH_BOARD
 	default "xx3803"                    if ARCH_BOARD_XX3803
 	default "xx3823"                    if ARCH_BOARD_XX3823
 	default "s698pm-dkit"               if ARCH_BOARD_S698PM_DKIT
-	default "hpm6360evk"				if ARCH_BOARD_HPM6360EVK
+	default "hpm6360evk"                if ARCH_BOARD_HPM6360EVK
 	default "hpm6750evk2"               if ARCH_BOARD_HPM6750EVK2
 	default "at32f437-mini"             if ARCH_BOARD_AT32F437_MINI
 
@@ -3569,6 +3589,9 @@ source "boards/arm/imx6/sabre-6quad/Kconfig"
 endif
 if ARCH_BOARD_TC397
 source "boards/tricore/tc3xx/tc397/Kconfig"
+endif
+if ARCH_BOARD_MPS3_AN547
+source "boards/arm/mps/mps3-an547/Kconfig"
 endif
 if ARCH_BOARD_QEMU_ARMV7A
 source "boards/arm/qemu/qemu-armv7a/Kconfig"
@@ -4756,6 +4779,12 @@ config BOARD_USBDEV_SERIALSTR
 	default n
 	---help---
 		Use board unique serial number to iSerialNumber in the device descriptor.
+
+config BOARD_USBDEV_PIDVID
+	bool "Board-specific usbdev pid/vid"
+	default n
+	---help---
+		Use board unique pid/vid.
 
 config BOARD_MEMORY_RANGE
 	string "Board memory range"

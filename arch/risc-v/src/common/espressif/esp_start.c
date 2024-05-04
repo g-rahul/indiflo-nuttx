@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <nuttx/arch.h>
@@ -90,15 +91,39 @@
                                  EXTMEM_ICACHE_SHUT_DBUS_M)
 
 #  define CHECKSUM_ALIGN        16
-#  define IS_PADD(addr) (addr == 0)
-#  define IS_DRAM(addr) (addr >= SOC_DRAM_LOW && addr < SOC_DRAM_HIGH)
-#  define IS_IRAM(addr) (addr >= SOC_IRAM_LOW && addr < SOC_IRAM_HIGH)
-#  define IS_IROM(addr) (addr >= SOC_IROM_LOW && addr < SOC_IROM_HIGH)
-#  define IS_DROM(addr) (addr >= SOC_DROM_LOW && addr < SOC_DROM_HIGH)
+#  define IS_PADD(addr) ((addr) == 0)
+#  define IS_DRAM(addr) ((addr) >= SOC_DRAM_LOW && (addr) < SOC_DRAM_HIGH)
+#  define IS_IRAM(addr) ((addr) >= SOC_IRAM_LOW && (addr) < SOC_IRAM_HIGH)
+#  define IS_IROM(addr) ((addr) >= SOC_IROM_LOW && (addr) < SOC_IROM_HIGH)
+#  define IS_DROM(addr) ((addr) >= SOC_DROM_LOW && (addr) < SOC_DROM_HIGH)
 #  define IS_SRAM(addr) (IS_IRAM(addr) || IS_DRAM(addr))
 #  define IS_MMAP(addr) (IS_IROM(addr) || IS_DROM(addr))
-#  define IS_NONE(addr) (!IS_IROM(addr) && !IS_DROM(addr) \
-                      && !IS_IRAM(addr) && !IS_DRAM(addr) && !IS_PADD(addr))
+#  ifdef SOC_RTC_FAST_MEM_SUPPORTED
+#    define IS_RTC_FAST_IRAM(addr) \
+                        ((addr) >= SOC_RTC_IRAM_LOW \
+                         && (addr) < SOC_RTC_IRAM_HIGH)
+#    define IS_RTC_FAST_DRAM(addr) \
+                        ((addr) >= SOC_RTC_DRAM_LOW \
+                         && (addr) < SOC_RTC_DRAM_HIGH)
+#  else
+#    define IS_RTC_FAST_IRAM(addr) false
+#    define IS_RTC_FAST_DRAM(addr) false
+#  endif
+#  ifdef SOC_RTC_SLOW_MEM_SUPPORTED
+#    define IS_RTC_SLOW_DRAM(addr) \
+                        ((addr) >= SOC_RTC_DATA_LOW \
+                         && (addr) < SOC_RTC_DATA_HIGH)
+#  else
+#    define IS_RTC_SLOW_DRAM(addr) false
+#  endif
+#  define IS_NONE(addr) (!IS_IROM(addr) \
+                         && !IS_DROM(addr) \
+                         && !IS_IRAM(addr) \
+                         && !IS_DRAM(addr) \
+                         && !IS_RTC_FAST_IRAM(addr) \
+                         && !IS_RTC_FAST_DRAM(addr) \
+                         && !IS_RTC_SLOW_DRAM(addr) \
+                         && !IS_PADD(addr))
 
 #  define IS_MAPPING(addr) IS_IROM(addr) || IS_DROM(addr)
 #endif
@@ -151,7 +176,7 @@ HDR_ATTR static void (*_entry_point)(void) = __start;
 
 /* Address of the IDLE thread */
 
-uint8_t g_idlestack[CONFIG_IDLETHREAD_STACKSIZE]
+uint8_t g_idlestack[SMP_STACK_SIZE]
   aligned_data(16) locate_data(".noinit");
 uintptr_t g_idle_topstack = ESP_IDLESTACK_TOP;
 
@@ -215,17 +240,9 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
   bool padding_checksum = false;
   unsigned int segments = 0;
   unsigned int ram_segments = 0;
+  unsigned int rom_segments = 0;
   size_t offset = CONFIG_BOOTLOADER_OFFSET_IN_FLASH;
 #endif
-
-  ets_printf("\nIROM lma: 0x%lx  vma: 0x%lx  size: 0x%lx\n",
-             (uint32_t)_image_irom_lma,
-             (uint32_t)_image_irom_vma,
-             (uint32_t)_image_irom_size);
-  ets_printf("DROM lma: 0x%lx  vma: 0x%lx  size: 0x%lx\n",
-             (uint32_t)_image_drom_lma,
-             (uint32_t)_image_drom_vma,
-             (uint32_t)_image_drom_size);
 
 #ifdef CONFIG_ESPRESSIF_SIMPLE_BOOT
 
@@ -243,7 +260,7 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
 
   /* Iterate for segment information parsing */
 
-  while (segments++ < 16)
+  while (segments++ < 16 && rom_segments < 2)
     {
       /* Read segment header */
 
@@ -262,15 +279,27 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
           break;
         }
 
+      if (IS_RTC_FAST_IRAM(segment_hdr.load_addr) ||
+          IS_RTC_FAST_DRAM(segment_hdr.load_addr) ||
+          IS_RTC_SLOW_DRAM(segment_hdr.load_addr))
+        {
+          /* RTC segment is loaded by ROM bootloader */
+
+          ram_segments++;
+        }
+
       ets_printf("%s: lma 0x%08x vma 0x%08lx len 0x%-6lx (%lu)\n",
-                 IS_NONE(segment_hdr.load_addr) ? "???" :
-                   IS_MMAP(segment_hdr.load_addr) ?
-                     IS_IROM(segment_hdr.load_addr) ? "imap" : "dmap" :
-                       IS_PADD(segment_hdr.load_addr) ? "padd" :
-                         IS_DRAM(segment_hdr.load_addr) ? "dram" : "iram",
-                 offset + sizeof(esp_image_segment_header_t),
-                 segment_hdr.load_addr, segment_hdr.data_len,
-                 segment_hdr.data_len);
+          IS_NONE(segment_hdr.load_addr) ? "???" :
+            IS_RTC_FAST_IRAM(segment_hdr.load_addr) ||
+            IS_RTC_FAST_DRAM(segment_hdr.load_addr) ||
+            IS_RTC_SLOW_DRAM(segment_hdr.load_addr) ? "rtc" :
+              IS_MMAP(segment_hdr.load_addr) ?
+                IS_IROM(segment_hdr.load_addr) ? "imap" : "dmap" :
+                  IS_PADD(segment_hdr.load_addr) ? "padd" :
+                    IS_DRAM(segment_hdr.load_addr) ? "dram" : "iram",
+          offset + sizeof(esp_image_segment_header_t),
+          segment_hdr.load_addr, segment_hdr.data_len,
+          segment_hdr.data_len);
 
       /* Fix drom and irom produced be the linker, as this
        * is later invalidated by the elf2image command.
@@ -281,6 +310,7 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
         {
           app_drom_start = offset + sizeof(esp_image_segment_header_t);
           app_drom_start_aligned = app_drom_start & MMU_FLASH_MASK;
+          rom_segments++;
         }
 
       if (IS_IROM(segment_hdr.load_addr) &&
@@ -288,6 +318,7 @@ static int map_rom_segments(uint32_t app_drom_start, uint32_t app_drom_vaddr,
         {
           app_irom_start = offset + sizeof(esp_image_segment_header_t);
           app_irom_start_aligned = app_irom_start & MMU_FLASH_MASK;
+          rom_segments++;
         }
 
       if (IS_SRAM(segment_hdr.load_addr))
@@ -427,6 +458,10 @@ void __esp_start(void)
     {
       *dest++ = 0;
     }
+
+  /* Setup base stack */
+
+  riscv_set_basestack(ESP_IDLESTACK_BASE, SMP_STACK_SIZE);
 
   /* Setup the syscall table needed by the ROM code */
 
