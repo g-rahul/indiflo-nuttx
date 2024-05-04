@@ -89,20 +89,22 @@
 #elif defined(CONFIG_STM32F7_FLASH_CONFIG_I)
 
 #  define STM32_FLASH_SIZE        _K((4 * 32) + (1 * 128) + (7 * 256))
-#  define STM32_FLASH_SIZES_ALT       {_K(32), _K(32), _K(32), _K(32), \
+#  define STM32_FLASH_SIZES_ACT       {_K(32), _K(32), _K(32), _K(32), \
                                    _K(128), _K(256), _K(256), _K(256), \
                                    _K(256), _K(256), _K(256), _K(256)}
 
 #  define STM32_FLASH_SIZES       {_K(256), _K(256), _K(256), _K(256), \
                                    _K(256), _K(256), _K(256), _K(256)}
 
-#  define FLASH_SECTOR_SIZE       _K(256)
-#  define STM32_FLASH_NBLOCKS      8
-#  define PROGMEM_NBLOCKS         STM32_FLASH_NBLOCKS
+#  define FLASH_SECTOR_SIZE         _K(256)
+#  define UP_PROGMEM_ERASE_NBLOCKS  8
+#  define STM32_FLASH_NBLOCK_ACT    12
+#  define UP_PROGMEM_PAGE_SIZE      32
+#  define FLASH_MERGE_BLK_COUNT     5
 
-#  define FLASH_PAGE_SIZE  32
-#  define STM32_FLASH_NPAGES   (STM32_FLASH_SIZE / FLASH_PAGE_SIZE)
-#  define FLASH_MERGE_BLK_COUNT 5
+#  define STM32_FLASH_PAGESIZE        UP_PROGMEM_PAGE_SIZE
+#  define STM32_FLASH_NPAGES          (STM32_FLASH_SIZE / STM32_FLASH_PAGESIZE)
+
 #endif
 
 /* Register Offsets *********************************************************/

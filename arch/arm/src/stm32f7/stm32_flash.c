@@ -154,7 +154,7 @@ int stm32_flash_writeprotect(size_t page, bool enabled)
   uint32_t reg;
   uint32_t val;
 
-  if (page >= STM32_FLASH_NPAGES)
+  if (page >= STM32_FLASH_NBLOCK_ACT)
     {
       return -EFAULT;
     }
@@ -221,20 +221,7 @@ int stm32_flash_writeprotect(size_t page, bool enabled)
 
 size_t up_progmem_pagesize(size_t page)
 {
-
-#if 0
-  static const size_t page_sizes[STM32_FLASH_NPAGES] = STM32_FLASH_SIZES;
-
-  if (page >= sizeof(page_sizes) / sizeof(*page_sizes))
-    {
-      return 0;
-    }
-  else
-    {
-      return page_sizes[page];
-    }
-#endif
-  return FLASH_PAGE_SIZE;
+  return UP_PROGMEM_PAGE_SIZE;
 }
 
 ssize_t up_progmem_getpage(size_t addr)
@@ -284,7 +271,7 @@ size_t up_progmem_getaddress(size_t page)
 
 size_t up_progmem_neraseblocks(void)
 {
-  return PROGMEM_NBLOCKS;
+  return UP_PROGMEM_ERASE_NBLOCKS;
 }
 
 bool up_progmem_isuniform(void)
@@ -327,46 +314,127 @@ size_t up_progmem_erasesize(size_t block)
   return FLASH_SECTOR_SIZE;
 }
 
+static size_t stm32_flash_blocksize(size_t block)
+{
+  static const size_t block_sizes[STM32_FLASH_NBLOCK_ACT] = STM32_FLASH_SIZES_ACT;
+
+  if (block >= sizeof(block_sizes) / sizeof(*block_sizes))
+  {
+    return 0;
+  }
+  else
+  {
+    return block_sizes[block];
+  }
+}
+
+size_t stm32_flash_blockgetaddress(size_t block)
+{
+  size_t base_address = STM32_FLASH_BASE;
+  size_t i;
+
+  if (block >= STM32_FLASH_NBLOCK_ACT)
+  {
+    return SIZE_MAX;
+  }
+
+  for (i = 0; i < block; ++i)
+  {
+    base_address += stm32_flash_blocksize(i);
+  }
+
+  return base_address;
+}
+
+static size_t stm32_flash_isblockerased(size_t block)
+{
+  size_t addr;
+  size_t count;
+  size_t bwritten = 0;
+
+  if (block >= STM32_FLASH_NBLOCK_ACT)
+  {
+    return -EFAULT;
+  }
+
+  /* Verify */
+
+  for (addr = stm32_flash_blockgetaddress(block), count = stm32_flash_blocksize(block);
+       count; count--, addr++)
+  {
+    if (getreg8(addr) != FLASH_ERASEDVALUE)
+    {
+      bwritten++;
+    }
+  }
+
+  return bwritten;
+
+}
+
+
 static ssize_t progmem_eraseblock_discrete(size_t block)
 {
-  int ret;
+  int ret = 0;
+  int erase_attempt = 0;
 
-  if (block >= STM32_FLASH_NPAGES)
-    {
-      return -EFAULT;
-    }
+  if (block >= STM32_FLASH_NBLOCK_ACT)
+  {
+    return -EFAULT;
+  }
 
   ret = nxmutex_lock(&g_lock);
-  if (ret < 0)
-    {
-      return (ssize_t)ret;
-    }
 
-  /* Get flash ready and begin erasing single block */
+  if (ret < 0)
+  {
+    return (ssize_t)ret;
+  }
+
+/* Get flash ready and begin erasing single block */
+flash_erase:
+
+  erase_attempt++;
 
   flash_unlock();
 
+  modifyreg32(STM32_FLASH_SR, 0, FLASH_SR_EOP);
   modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_SER);
   modifyreg32(STM32_FLASH_CR, FLASH_CR_SNB_MASK, FLASH_CR_SNB(block));
   modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_STRT);
+ 
+  while ((getreg32(STM32_FLASH_SR) & FLASH_SR_BSY) 
+               && !(getreg32(STM32_FLASH_SR) & FLASH_SR_EOP))
+  {
+    stm32_waste();
+  }
 
-  while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
-    {
-      stm32_waste();
-    }
+  if( getreg32(STM32_FLASH_SR) & (FLASH_SR_OPERR
+                               |  FLASH_SR_WRPERR
+                               |  FLASH_SR_PGAERR
+                               |  FLASH_SR_PGPERR
+                               |  FLASH_SR_PGSERR))
+  {
+    return -EIO; /* failure */
+  }
 
   modifyreg32(STM32_FLASH_CR, FLASH_CR_SER, 0);
   nxmutex_unlock(&g_lock);
 
   /* Verify */
-
-  if (up_progmem_ispageerased(block) == 0)
+  if (stm32_flash_isblockerased(block) == 0)
     {
-      return up_progmem_pagesize(block); /* success */
+      return stm32_flash_blocksize(block); /* success */
     }
   else
     {
-      return -EIO; /* failure */
+      if(erase_attempt == 5)
+      {
+        return -EIO; /* failure */
+      }
+      else
+      {
+        goto flash_erase;  /* Take More Attempt */
+      }
     }
 }
 
@@ -377,9 +445,9 @@ ssize_t up_progmem_eraseblock(size_t block)
   size_t merge_blk_cnt = FLASH_MERGE_BLK_COUNT;
 
   /* Erase combined HW sectors for block index < 5 */
-  if (block < merge_blk_cnt)
+  if (block == 0 )
   {
-    for (i=0; i < merge_blk_cnt; i++)
+    for (i = 0; i < merge_blk_cnt; i++)
     {
       ret = progmem_eraseblock_discrete(i);
       if (ret < 0)
@@ -390,6 +458,7 @@ ssize_t up_progmem_eraseblock(size_t block)
   }
   else
   {
+    block += (FLASH_MERGE_BLK_COUNT - 1);
     return progmem_eraseblock_discrete(block);
   }
 
