@@ -1427,6 +1427,37 @@ comment "MCUboot support depends on CONFIG_EXPERIMENTAL"
 
 endchoice # Application Image Format
 
+menu "W25 NOR-Flash MTD configuration"
+
+config W25_OTA_PARTITION
+	bool "MTD driver"
+	select BCH
+	select MTD
+	select MTD_BYTE_WRITE
+	select MTD_PARTITION
+	select MTD_W25
+	default n
+	---help---
+		Initialize an MTD driver for the External NOR Flash, which will
+		add an entry at /dev for application access from userspace.
+
+if W25_OTA_PARTITION
+config W25_OTA_PRIMARY_SLOT_DEVPATH
+	string "Application image primary slot device path"
+	default "/dev/w250"
+
+config W25_OTA_PRIMARY_SLOT_OFFSET
+	hex "MCUboot application image primary slot offset"
+	default "0x40000"
+
+config W25_OTA_SLOT_SIZE
+	hex "MCUboot application image slot size (in bytes)"
+	default "0xc0000"
+
+endif # W25_OTA_PARTITION
+
+endmenu # W25 NOR-Flash MTD configuration
+
 menu "Progmem MTD configuration"
 
 if SOC_HAVE_OTA_PARTITION

@@ -60,13 +60,13 @@
  */
 
 #ifndef CONFIG_W25_SPIMODE
-#  define CONFIG_W25_SPIMODE SPIDEV_MODE0
+#  define CONFIG_W25_SPIMODE SPIDEV_MODE3
 #endif
 
 /* SPI Frequency.  May be up to 25MHz. */
 
 #ifndef CONFIG_W25_SPIFREQUENCY
-#  define CONFIG_W25_SPIFREQUENCY 20000000
+#  define CONFIG_W25_SPIFREQUENCY 10000000
 #endif
 
 /* W25 Instructions *********************************************************/
@@ -92,6 +92,7 @@
 /* Read ID (RDID) register values */
 
 #define W25_MANUFACTURER           0xef   /* Winbond Serial Flash */
+#define W25X40_DEVID               0x12   /* W25X16 device ID (0xab, 0x90) */
 #define W25X16_DEVID               0x14   /* W25X16 device ID (0xab, 0x90) */
 #define W25X32_DEVID               0x15   /* W25X16 device ID (0xab, 0x90) */
 #define W25X64_DEVID               0x16   /* W25X16 device ID (0xab, 0x90) */
@@ -108,6 +109,7 @@
 #define W25Q_JEDEC_MEMORY_TYPE_D   0x70  /* W25QJV memory type (backward compatible) */
 
 #define W25_JEDEC_CAPACITY_2MBIT   0x12  /* 256x1024  = 2Mbit memory capacity */
+#define W25_JEDEC_CAPACITY_4MBIT   0x13  /* 256x2048  = 4Mbit memory capacity */
 #define W25_JEDEC_CAPACITY_8MBIT   0x14  /* 256x4096  = 8Mbit memory capacity */
 #define W25_JEDEC_CAPACITY_16MBIT  0x15  /* 512x4096  = 16Mbit memory capacity */
 #define W25_JEDEC_CAPACITY_32MBIT  0x16  /* 1024x4096 = 32Mbit memory capacity */
@@ -115,6 +117,7 @@
 #define W25_JEDEC_CAPACITY_128MBIT 0x18  /* 4096x4096 = 128Mbit memory capacity */
 
 #define NSECTORS_2MBIT             64    /* 64 sectors x 4096 bytes/sector = 256Kb */
+#define NSECTORS_4MBIT             128   /* 128 sectors x 4096 bytes/sector = 1Mb */
 #define NSECTORS_8MBIT             256   /* 256 sectors x 4096 bytes/sector = 1Mb */
 #define NSECTORS_16MBIT            512   /* 512 sectors x 4096 bytes/sector = 2Mb */
 #define NSECTORS_32MBIT            1024  /* 1024 sectors x 4096 bytes/sector = 4Mb */
@@ -412,6 +415,16 @@ static inline int w25_readid(struct w25_dev_s *priv)
       if (capacity == W25_JEDEC_CAPACITY_2MBIT)
         {
            priv->nsectors = NSECTORS_2MBIT;
+        }
+
+      /* 4M-bit / 512K-byte
+       *
+       * W25X40CL
+       */
+
+      if (capacity == W25_JEDEC_CAPACITY_4MBIT)
+        {
+           priv->nsectors = NSECTORS_4MBIT;
         }
 
       /* 8M-bit / 1M-byte
