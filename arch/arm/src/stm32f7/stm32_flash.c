@@ -319,13 +319,13 @@ static size_t stm32_flash_blocksize(size_t block)
   static const size_t block_sizes[STM32_FLASH_NBLOCK_ACT] = STM32_FLASH_SIZES_ACT;
 
   if (block >= sizeof(block_sizes) / sizeof(*block_sizes))
-  {
-    return 0;
-  }
+    {
+      return 0;
+    }
   else
-  {
-    return block_sizes[block];
-  }
+    {
+      return block_sizes[block];
+    }
 }
 
 size_t stm32_flash_blockgetaddress(size_t block)
@@ -334,14 +334,14 @@ size_t stm32_flash_blockgetaddress(size_t block)
   size_t i;
 
   if (block >= STM32_FLASH_NBLOCK_ACT)
-  {
-    return SIZE_MAX;
-  }
+    {
+      return SIZE_MAX;
+    }
 
   for (i = 0; i < block; ++i)
-  {
-    base_address += stm32_flash_blocksize(i);
-  }
+    {
+      base_address += stm32_flash_blocksize(i);
+    }
 
   return base_address;
 }
@@ -353,20 +353,20 @@ static size_t stm32_flash_isblockerased(size_t block)
   size_t bwritten = 0;
 
   if (block >= STM32_FLASH_NBLOCK_ACT)
-  {
-    return -EFAULT;
-  }
+    {
+      return -EFAULT;
+    }
 
   /* Verify */
 
   for (addr = stm32_flash_blockgetaddress(block), count = stm32_flash_blocksize(block);
        count; count--, addr++)
-  {
-    if (getreg8(addr) != FLASH_ERASEDVALUE)
     {
-      bwritten++;
+      if (getreg8(addr) != FLASH_ERASEDVALUE)
+        {
+          bwritten++;
+        }
     }
-  }
 
   return bwritten;
 
@@ -379,63 +379,56 @@ static ssize_t progmem_eraseblock_discrete(size_t block)
   int erase_attempt = 0;
 
   if (block >= STM32_FLASH_NBLOCK_ACT)
-  {
-    return -EFAULT;
-  }
+    {
+      return -EFAULT;
+    }
 
   ret = nxmutex_lock(&g_lock);
 
   if (ret < 0)
-  {
-    return (ssize_t)ret;
-  }
-
-/* Get flash ready and begin erasing single block */
-flash_erase:
-
-  erase_attempt++;
-
-  flash_unlock();
-
-  modifyreg32(STM32_FLASH_SR, 0, FLASH_SR_EOP);
-  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_SER);
-  modifyreg32(STM32_FLASH_CR, FLASH_CR_SNB_MASK, FLASH_CR_SNB(block));
-  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_STRT);
- 
-  while ((getreg32(STM32_FLASH_SR) & FLASH_SR_BSY) 
-               && !(getreg32(STM32_FLASH_SR) & FLASH_SR_EOP))
-  {
-    stm32_waste();
-  }
-
-  if( getreg32(STM32_FLASH_SR) & (FLASH_SR_OPERR
-                               |  FLASH_SR_WRPERR
-                               |  FLASH_SR_PGAERR
-                               |  FLASH_SR_PGPERR
-                               |  FLASH_SR_PGSERR))
-  {
-    return -EIO; /* failure */
-  }
-
-  modifyreg32(STM32_FLASH_CR, FLASH_CR_SER, 0);
-  nxmutex_unlock(&g_lock);
-
-  /* Verify */
-  if (stm32_flash_isblockerased(block) == 0)
     {
-      return stm32_flash_blocksize(block); /* success */
+      return (ssize_t)ret;
     }
-  else
+
+  /* Get flash ready and begin erasing single block */
+
+  while (erase_attempt <= STM32_FLASH_ERASE_MAX_ATTEMPT)
     {
-      if(erase_attempt == 5)
-      {
-        return -EIO; /* failure */
-      }
-      else
-      {
-        goto flash_erase;  /* Take More Attempt */
-      }
+      erase_attempt++;
+      flash_unlock();
+
+      modifyreg32(STM32_FLASH_SR, 0, FLASH_SR_EOP);
+      modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_SER);
+      modifyreg32(STM32_FLASH_CR, FLASH_CR_SNB_MASK, FLASH_CR_SNB(block));
+      modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_STRT);
+
+      while ((getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
+                && !(getreg32(STM32_FLASH_SR) & FLASH_SR_EOP))
+        {
+          stm32_waste();
+        }
+
+      if( getreg32(STM32_FLASH_SR) & (FLASH_SR_OPERR
+                                  |  FLASH_SR_WRPERR
+                                  |  FLASH_SR_PGAERR
+                                  |  FLASH_SR_PGPERR
+                                  |  FLASH_SR_PGSERR))
+        {
+          return -EIO; /* failure */
+        }
+
+      modifyreg32(STM32_FLASH_CR, FLASH_CR_SER, 0);
+      nxmutex_unlock(&g_lock);
+
+      /* Verify */
+      if (stm32_flash_isblockerased(block) == 0)
+        {
+          return stm32_flash_blocksize(block); /* success */
+        }
     }
+
+  return -EIO; /* failure */
+
 }
 
 ssize_t up_progmem_eraseblock(size_t block)
