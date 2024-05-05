@@ -102,9 +102,9 @@
 #  define UP_PROGMEM_PAGE_SIZE      32
 #  define FLASH_MERGE_BLK_COUNT     5
 
-#  define STM32_FLASH_PAGESIZE        UP_PROGMEM_PAGE_SIZE
-#  define STM32_FLASH_NPAGES          (STM32_FLASH_SIZE / STM32_FLASH_PAGESIZE)
-
+#  define STM32_FLASH_PAGESIZE           UP_PROGMEM_PAGE_SIZE
+#  define STM32_FLASH_NPAGES             (STM32_FLASH_SIZE / STM32_FLASH_PAGESIZE)
+#  define STM32_FLASH_ERASE_MAX_ATTEMPT  4
 #endif
 
 /* Register Offsets *********************************************************/
