@@ -53,8 +53,10 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <nuttx/mutex.h>
+#include <nuttx/cache.h>
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <assert.h>
 #include <errno.h>
 
@@ -72,7 +74,9 @@
 #define FLASH_KEY2         0xcdef89ab
 #define FLASH_OPTKEY1      0x08192a3b
 #define FLASH_OPTKEY2      0x4c5d6e7f
-#define FLASH_ERASEDVALUE  0xff
+#define FLASH_ERASEDVALUE  0xffu
+#define FLASH_ERASEDVALUE_DW 0xffffffffu
+#define F7_FLASH_TIMEOUT_VALUE 5000000  /* 5s */
 
 /****************************************************************************
  * Private Data
@@ -84,11 +88,56 @@ static mutex_t g_lock = NXMUTEX_INITIALIZER;
  * Private Functions
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: stm32_wait_for_last_operation()
+ *
+ * Description:
+ *   Wait for last write/erase operation to finish
+ *   Return error in case of timeout
+ *
+ * Input Parameters:
+ *   priv  - Flash bank based config
+ *
+ * Returned Value:
+ *     Zero or error value
+ *
+ *     ETIME:  Timeout while waiting for previous write/erase operation to
+ *             complete
+ *
+ ****************************************************************************/
+
+static int stm32_wait_for_last_op(void)
+{
+  int i;
+  bool timeout = true;
+
+  ARM_DSB();
+
+  for (i = 0; i < F7_FLASH_TIMEOUT_VALUE; i++)
+    {
+      if (!(getreg32(STM32_FLASH_SR) & FLASH_SR_BSY))
+        {
+          timeout = false;
+          break;
+        }
+      up_udelay(1);
+    }
+
+  if (timeout)
+    {
+      return -EBUSY;
+    }
+
+  return 0;
+}
+
 static void flash_unlock(void)
 {
-  while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
+
+  /* Wait for completion */
+  if (stm32_wait_for_last_op())
     {
-      stm32_waste();
+      DEBUGASSERT(0);
     }
 
   if (getreg32(STM32_FLASH_CR) & FLASH_CR_LOCK)
@@ -207,10 +256,9 @@ int stm32_flash_writeprotect(size_t page, bool enabled)
   modifyreg32(STM32_FLASH_OPTCR, 0, FLASH_OPTCR_OPTSTRT);
 
   /* Wait for completion */
-
-  while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
+  if (stm32_wait_for_last_op())
     {
-      stm32_waste();
+      return -EIO;
     }
 
   /* Re-lock options */
@@ -295,7 +343,6 @@ ssize_t up_progmem_ispageerased(size_t page)
     }
 
   /* Verify */
-
   for (addr = up_progmem_getaddress(page), count = up_progmem_pagesize(page);
        count; count--, addr++)
     {
@@ -346,37 +393,61 @@ size_t stm32_flash_blockgetaddress(size_t block)
   return base_address;
 }
 
-static size_t stm32_flash_isblockerased(size_t block)
+/****************************************************************************
+ * Name: stm32h7_israngeerased
+ *
+ * Description:
+ *   Returns count of non-erased words
+ *
+ ****************************************************************************/
+
+static int stm32h7_israngeerased(size_t startaddress, size_t size)
 {
-  size_t addr;
-  size_t count;
+  uint32_t *addr;
+  uint8_t *baddr;
+  size_t count = 0;
   size_t bwritten = 0;
 
-  if (block >= STM32_FLASH_NBLOCK_ACT)
+  if (!(((startaddress >= STM32_FLASH_BASE) &&
+      (startaddress + size <= STM32_FLASH_BASE + STM32_FLASH_SIZE)) ||
+      ((startaddress >= STM32_OPT_BASE) &&
+      (startaddress + size <= STM32_OPT_BASE + STM32_OPT_SIZE))))
     {
       return -EFAULT;
     }
 
-  /* Verify */
-
-  for (addr = stm32_flash_blockgetaddress(block), count = stm32_flash_blocksize(block);
-       count; count--, addr++)
+  addr = (uint32_t *)startaddress;
+  while (count + 4 <= size)
     {
-      if (getreg8(addr) != FLASH_ERASEDVALUE)
+      if (getreg32(addr) != FLASH_ERASEDVALUE_DW)
         {
           bwritten++;
         }
+
+      addr++;
+      count += 4;
+    }
+
+  baddr = (uint8_t *)addr;
+  while (count < size)
+    {
+      if (getreg8(baddr) != FLASH_ERASEDVALUE)
+        {
+          bwritten++;
+        }
+
+      baddr++;
+      count++;
     }
 
   return bwritten;
-
 }
-
 
 static ssize_t progmem_eraseblock_discrete(size_t block)
 {
   int ret = 0;
-  int erase_attempt = 0;
+  size_t block_address = stm32_flash_blockgetaddress(block);
+  size_t block_size = stm32_flash_blocksize(block);
 
   if (block >= STM32_FLASH_NBLOCK_ACT)
     {
@@ -384,63 +455,78 @@ static ssize_t progmem_eraseblock_discrete(size_t block)
     }
 
   ret = nxmutex_lock(&g_lock);
-
   if (ret < 0)
     {
       return (ssize_t)ret;
     }
 
-  /* Get flash ready and begin erasing single block */
-
-  while (erase_attempt <= STM32_FLASH_ERASE_MAX_ATTEMPT)
+  if (stm32_wait_for_last_op())
     {
-      erase_attempt++;
-      flash_unlock();
-
-      modifyreg32(STM32_FLASH_SR, 0, FLASH_SR_EOP);
-      modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_SER);
-      modifyreg32(STM32_FLASH_CR, FLASH_CR_SNB_MASK, FLASH_CR_SNB(block));
-      modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_STRT);
-
-      while ((getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
-                && !(getreg32(STM32_FLASH_SR) & FLASH_SR_EOP))
-        {
-          stm32_waste();
-        }
-
-      if( getreg32(STM32_FLASH_SR) & (FLASH_SR_OPERR
-                                  |  FLASH_SR_WRPERR
-                                  |  FLASH_SR_PGAERR
-                                  |  FLASH_SR_PGPERR
-                                  |  FLASH_SR_PGSERR))
-        {
-          return -EIO; /* failure */
-        }
-
-      modifyreg32(STM32_FLASH_CR, FLASH_CR_SER, 0);
-      nxmutex_unlock(&g_lock);
-
-      /* Verify */
-      if (stm32_flash_isblockerased(block) == 0)
-        {
-          return stm32_flash_blocksize(block); /* success */
-        }
+      ret = -EIO;
+      goto exit_with_lock;
     }
 
-  return -EIO; /* failure */
+  /* Unlock Flash for Erase */
+  flash_unlock();
 
+  /* Start Sector Erase */
+  modifyreg32(STM32_FLASH_SR, 0, FLASH_SR_EOP);
+  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_SER);
+  modifyreg32(STM32_FLASH_CR, FLASH_CR_PSIZE_MASK, FLASH_CR_PSIZE_X32);
+  modifyreg32(STM32_FLASH_CR, FLASH_CR_SNB_MASK, FLASH_CR_SNB(block));
+  modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_STRT);
+
+  /* Wait for BSY Flag */
+  if (stm32_wait_for_last_op())
+    {
+      ret = -EIO;
+      goto exit_with_unlock;
+    }
+
+  /* Check for Any Error Bits */
+  if( getreg32(STM32_FLASH_SR) & FLASH_SR_WRPERR)
+    {
+      ret = -EIO;
+      goto exit_with_unlock;
+    }
+
+  modifyreg32(STM32_FLASH_CR, FLASH_CR_SER, 0);
+  modifyreg32(STM32_FLASH_CR, FLASH_CR_SNB_MASK, 0);
+
+  ret = 0;
+
+  up_invalidate_dcache(block_address, block_address + block_size);
+
+exit_with_unlock:
+    flash_lock();
+
+exit_with_lock:
+    nxmutex_unlock(&g_lock);
+
+  /* Verify */
+
+  if (ret == 0 &&
+      stm32h7_israngeerased(block_address, up_progmem_erasesize(block)) == 0)
+    {
+      ret = up_progmem_erasesize(block); /* success */
+    }
+  else
+    {
+      ret = -EIO; /* failure */
+    }
+
+  return ret; /* failure */
 }
 
 ssize_t up_progmem_eraseblock(size_t block)
 {
   int ret = 0;
   size_t i = 0;
-  size_t merge_blk_cnt = FLASH_MERGE_BLK_COUNT;
 
   /* Erase combined HW sectors for block index < 5 */
   if (block == 0 )
   {
-    for (i = 0; i < merge_blk_cnt; i++)
+    for (i = 0; i < FLASH_MERGE_BLK_COUNT; i++)
     {
       ret = progmem_eraseblock_discrete(i);
       if (ret < 0)
@@ -454,35 +540,33 @@ ssize_t up_progmem_eraseblock(size_t block)
     block += (FLASH_MERGE_BLK_COUNT - 1);
     return progmem_eraseblock_discrete(block);
   }
-
   return ret;
 }
 
 ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
 {
-  uint8_t *byte = (uint8_t *)buf;
-  size_t written = count;
-  uintptr_t flash_base;
+  uint32_t     *fp;
+  uint32_t     *rp;
+  uint32_t     *ll        = (uint32_t *)buf;
+  size_t       faddr;
+  size_t       written    = count;
+  const size_t pagesize   = up_progmem_pagesize(0)/8;
+  const size_t llperpage  = pagesize / sizeof(uint32_t);
+  size_t       pcount     = count / pagesize;
+  uint32_t     sr;
+  uint32_t     sr_mask = FLASH_SR_WRPERR | FLASH_SR_PGAERR | \
+                         FLASH_SR_PGPERR | FLASH_SR_PGSERR ;
   int ret;
 
   /* Check for valid address range */
 
-  if (addr >= STM32_FLASH_BASE &&
-      addr + count <= STM32_FLASH_BASE + STM32_FLASH_SIZE)
-    {
-      flash_base = STM32_FLASH_BASE;
-    }
-  else if (addr >= STM32_OPT_BASE &&
-           addr + count <= STM32_OPT_BASE + STM32_OPT_SIZE)
-    {
-      flash_base = STM32_OPT_BASE;
-    }
-  else
+  if (!(((addr >= STM32_FLASH_BASE) &&
+      (addr + count <= STM32_FLASH_BASE + STM32_FLASH_SIZE)) ||
+      ((addr >= STM32_OPT_BASE) &&
+      (addr + count <= STM32_OPT_BASE + STM32_OPT_SIZE))))
     {
       return -EFAULT;
     }
-
-  addr -= flash_base;
 
   ret = nxmutex_lock(&g_lock);
   if (ret < 0)
@@ -490,21 +574,38 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
       return (ssize_t)ret;
     }
 
-  /* Get flash ready and begin flashing */
+  DEBUGASSERT(!(addr % pagesize));
+  DEBUGASSERT(!(count % pagesize));
 
+  /* Wait for BSY Flag */
+  if (stm32_wait_for_last_op())
+    {
+      ret = -EIO;
+      goto exit_with_lock;
+    }
+
+  /* Get flash ready and begin flashing */
   flash_unlock();
 
+  /* Enable Flash Programming */
   modifyreg32(STM32_FLASH_CR, 0, FLASH_CR_PG);
 
-  /* TODO: implement up_progmem_write() to support other sizes than 8-bits */
+  modifyreg32(STM32_FLASH_SR, sr_mask, sr_mask);
+  modifyreg32(STM32_FLASH_SR, FLASH_CR_SNB_MASK, 0);
 
-  modifyreg32(STM32_FLASH_CR, FLASH_CR_PSIZE_MASK, FLASH_CR_PSIZE_X8);
+  modifyreg32(STM32_FLASH_CR, FLASH_CR_PSIZE_MASK, FLASH_CR_PSIZE_X32);
 
-  for (addr += flash_base; count; count -= 1, byte++, addr += 1)
+  for (ll = (uint32_t *)buf, faddr = addr; pcount;
+      pcount -= 1, ll += llperpage, faddr += pagesize)
     {
-      /* Write half-word and wait to complete */
+      fp = (uint32_t *)faddr;
+      rp = ll;
 
-      putreg8(*byte, addr);
+      ARM_DSB();
+      ARM_ISB();
+
+      /* Write 1 32 bit word and wait to complete */
+      *fp++ = *rp++;
 
       /* Data synchronous Barrier (DSB) just after the write operation. This
        * will force the CPU to respect the sequence of instruction (no
@@ -512,31 +613,60 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
        */
 
       ARM_DSB();
+      ARM_ISB();
 
-      while (getreg32(STM32_FLASH_SR) & FLASH_SR_BSY)
+      /* Wait for BSY Flag */
+      if (stm32_wait_for_last_op())
         {
-          stm32_waste();
+          ret = -EIO;
+          goto exit_with_unlock;
         }
 
-      /* Verify */
-
-      if (getreg32(STM32_FLASH_SR) & FLASH_CR_SER)
+      sr = getreg32(STM32_FLASH_SR);
+      if (sr & (FLASH_SR_WRPERR | FLASH_SR_PGAERR |
+                FLASH_SR_PGPERR | FLASH_SR_PGSERR ))
         {
           modifyreg32(STM32_FLASH_CR, FLASH_CR_PG, 0);
-          nxmutex_unlock(&g_lock);
-          return -EROFS;
-        }
-
-      if (getreg8(addr) != *byte)
-        {
-          modifyreg32(STM32_FLASH_CR, FLASH_CR_PG, 0);
-          nxmutex_unlock(&g_lock);
-          return -EIO;
+          modifyreg32(STM32_FLASH_SR, sr_mask, sr_mask);
+          ret = -EIO;
+          goto exit_with_unlock;
         }
     }
 
   modifyreg32(STM32_FLASH_CR, FLASH_CR_PG, 0);
 
+exit_with_unlock:
+  flash_lock();
+
+ /* Verify */
+  if (written > 0)
+    {
+      for (ll = (uint32_t *)buf, faddr = addr, pcount = count / pagesize;
+          pcount; pcount -= 1, ll += llperpage, faddr += pagesize)
+        {
+          fp = (uint32_t *)faddr;
+          rp = ll;
+
+          modifyreg32(STM32_FLASH_SR, sr_mask, sr_mask);
+
+          if ((*fp++ != *rp++))
+            {
+              written = -EIO;
+              break;
+            }
+
+          sr = getreg32(STM32_FLASH_SR);
+          if (sr & (FLASH_SR_WRPERR | FLASH_SR_PGAERR |
+                    FLASH_SR_PGPERR | FLASH_SR_PGSERR ))
+            {
+              written = -EIO;
+              break;
+            }
+        }
+      modifyreg32(STM32_FLASH_SR, sr_mask, sr_mask);
+    }
+
+exit_with_lock:
   nxmutex_unlock(&g_lock);
   return written;
 }

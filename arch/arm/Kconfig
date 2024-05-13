@@ -1448,11 +1448,23 @@ config W25_OTA_PRIMARY_SLOT_DEVPATH
 
 config W25_OTA_PRIMARY_SLOT_OFFSET
 	hex "MCUboot application image primary slot offset"
-	default "0x40000"
+	default "0x00000"
 
 config W25_OTA_SLOT_SIZE
 	hex "MCUboot application image slot size (in bytes)"
-	default "0xc0000"
+	default "0x1c0000"
+
+config W25_OTA_SCRATCH_DEVPATH
+	string "Application image scratch slot device path"
+	default "/dev/w25scratch"
+
+config W25_OTA_SCRATCH_OFFSET
+	hex "MCUboot application image scratch slot offset"
+	default "0x200000"
+
+config W25_OTA_SCRATCH_SIZE
+	hex "MCUboot application image scratch size (in bytes)"
+	default "0x40000"
 
 endif # W25_OTA_PARTITION
 
@@ -1507,7 +1519,7 @@ config SOC_OTA_SCRATCH_OFFSET
 
 config SOC_OTA_SLOT_SIZE
 	hex "MCUboot application image slot size (in bytes)"
-	default "0xc0000"
+	default "0x1c0000"
 
 config SOC_OTA_SCRATCH_SIZE
 	hex "MCUboot scratch partition size (in bytes)"
