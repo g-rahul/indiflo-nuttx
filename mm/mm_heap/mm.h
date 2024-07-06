@@ -108,7 +108,7 @@
 
 /* All other definitions derive from these two */
 
-#define MM_MIN_CHUNK     (1 << MM_MIN_SHIFT)
+#define MM_MIN_CHUNK     (CONFIG_MM_MIN_CHUNK_SIZE_FACTOR << MM_MIN_SHIFT)
 #define MM_MAX_CHUNK     (1 << MM_MAX_SHIFT)
 #define MM_NNODES        (MM_MAX_SHIFT - MM_MIN_SHIFT + 1)
 

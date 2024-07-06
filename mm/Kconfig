@@ -60,6 +60,17 @@ config MM_KERNEL_HEAPSIZE
 		user-mode heap.  This value may need to be aligned to units of the
 		size of the smallest memory protection region.
 
+config MM_MIN_CHUNK_SIZE_FACTOR
+	int "Minimum Chunk Size Factor"
+	default 1
+	range 1 4
+	---help---
+		Factor Multiple of mm_freenode_s to control minimum heap chunk
+		size for alignment adjustment. It must be at least as large
+		as sizeof(struct mm_freenode_s). Larger values may improve
+		performance slightly, but will waste memory due to
+		quantization losses.
+
 config MM_DEFAULT_ALIGNMENT
 	int "Memory default alignment in bytes"
 	default 0
