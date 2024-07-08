@@ -71,21 +71,22 @@
 
 /* W25 Instructions *********************************************************/
 
-#define W25_WREN                   0x06    /* Write enable                   */
-#define W25_WRDI                   0x04    /* Write Disable                  */
-#define W25_RDSR                   0x05    /* Read status register           */
-#define W25_WRSR                   0x01    /* Write Status Register          */
-#define W25_RDDATA                 0x03    /* Read data bytes                */
-#define W25_FRD                    0x0b    /* Higher speed read              */
-#define W25_FRDD                   0x3b    /* Fast read, dual output         */
-#define W25_PP                     0x02    /* Program page                   */
-#define W25_BE                     0xd8    /* Block Erase (64KB)             */
-#define W25_SE                     0x20    /* Sector erase (4KB)             */
-#define W25_CE                     0xc7    /* Chip erase                     */
-#define W25_PD                     0xb9    /* Power down                     */
-#define W25_PURDID                 0xab    /* Release PD, Device ID          */
-#define W25_RDMFID                 0x90    /* Read Manufacturer / Device     */
-#define W25_JEDEC_ID               0x9f    /* JEDEC ID read                  */
+#define W25_WREN                     0x06    /* Write enable                   */
+#define W25_WRDI                     0x04    /* Write Disable                  */
+#define W25_RDSR                     0x05    /* Read status register           */
+#define W25_WRSR                     0x01    /* Write Status Register          */
+#define W25_RDDATA                   0x03    /* Read data bytes                */
+#define W25_FRD                      0x0b    /* Higher speed read              */
+#define W25_FRDD                     0x3b    /* Fast read, dual output         */
+#define W25_PP                       0x02    /* Program page                   */
+#define W25_BE64                     0xd8    /* Block Erase (64KB)             */
+#define W25_BE32                     0x52    /* Block Erase (64KB)             */
+#define W25_SE                       0x20    /* Sector erase (4KB)             */
+#define W25_CE                       0xc7    /* Chip erase                     */
+#define W25_PD                       0xb9    /* Power down                     */
+#define W25_PURDID                   0xab    /* Release PD, Device ID          */
+#define W25_RDMFID                   0x90    /* Read Manufacturer / Device     */
+#define W25_JEDEC_ID                 0x9f    /* JEDEC ID read                  */
 
 /* W25 Registers ************************************************************/
 
@@ -256,8 +257,8 @@ static inline void w25_wrdi(FAR struct w25_dev_s *priv);
 static bool w25_is_erased(struct w25_dev_s *priv,
                           off_t address,
                           off_t size);
-static void w25_sectorerase(FAR struct w25_dev_s *priv,
-                            off_t offset);
+static void w25_blockerase(FAR struct w25_dev_s *priv,
+                            off_t offset, off_t blk_size);
 static inline int w25_chiperase(FAR struct w25_dev_s *priv);
 static void w25_byteread(FAR struct w25_dev_s *priv,
                          FAR uint8_t *buffer,
@@ -675,55 +676,6 @@ static bool w25_is_erased(struct w25_dev_s *priv, off_t address, off_t size)
 }
 
 /****************************************************************************
- * Name:  w25_sectorerase
- ****************************************************************************/
-
-static void w25_sectorerase(struct w25_dev_s *priv, off_t sector)
-{
-  off_t address = sector << W25_SECTOR_SHIFT;
-
-  finfo("sector: %08lx\n", (long)sector);
-
-  /* Check if sector is already erased. */
-
-  if (w25_is_erased(priv, address, W25_SECTOR_SIZE))
-    {
-      /* Sector already in erased state, so skip erase. */
-
-      return;
-    }
-
-  /* Wait for any preceding write or erase operation to complete. */
-
-  w25_waitwritecomplete(priv);
-
-  /* Send write enable instruction */
-
-  w25_wren(priv);
-
-  /* Select this FLASH part */
-
-  SPI_SELECT(priv->spi, SPIDEV_FLASH(0), true);
-
-  /* Send the "Sector Erase (SE)" instruction */
-
-  SPI_SEND(priv->spi, W25_SE);
-  priv->prev_instr = W25_SE;
-
-  /* Send the sector address high byte first. Only the most significant bits
-   * (those corresponding to the sector) have any meaning.
-   */
-
-  SPI_SEND(priv->spi, (address >> 16) & 0xff);
-  SPI_SEND(priv->spi, (address >> 8) & 0xff);
-  SPI_SEND(priv->spi, address & 0xff);
-
-  /* Deselect the FLASH */
-
-  SPI_SELECT(priv->spi, SPIDEV_FLASH(0), false);
-}
-
-/****************************************************************************
  * Name:  w25_chiperase
  ****************************************************************************/
 
@@ -1028,7 +980,7 @@ static void w25_cacheerase(struct w25_dev_s *priv, off_t sector)
       off_t esectno  = sector >> (W25_SECTOR_SHIFT - W25_SECTOR512_SHIFT);
       finfo("sector: %ld esectno: %d\n", sector, esectno);
 
-      w25_sectorerase(priv, esectno);
+      w25_blockerase(priv, esectno, W25_SECTOR_SIZE);
       SET_ERASED(priv);
     }
 
@@ -1073,7 +1025,7 @@ static void w25_cachewrite(FAR struct w25_dev_s *priv,
                            (W25_SECTOR_SHIFT - W25_SECTOR512_SHIFT);
           finfo("sector: %ld esectno: %d\n", sector, esectno);
 
-          w25_sectorerase(priv, esectno);
+          w25_blockerase(priv, esectno, W25_SECTOR_SIZE);
           SET_ERASED(priv);
         }
 
@@ -1095,46 +1047,163 @@ static void w25_cachewrite(FAR struct w25_dev_s *priv,
 #endif
 
 /****************************************************************************
+ * Name: w25_blockerase
+ ****************************************************************************/
+#ifdef CONFIG_W25_64KB_ERASE
+#define CONFIG_ERASE_64KB (64 * 1024)
+#endif
+#ifdef CONFIG_W25_32KB_ERASE
+#define CONFIG_ERASE_32KB (32 * 1024)
+#endif
+#ifdef CONFIG_W25_4KB_ERASE
+#define CONFIG_ERASE_4KB  ( 4 * 1024)
+#endif
+
+static void w25_blockerase(struct w25_dev_s *priv,
+                            off_t sector, off_t blk_size)
+{
+
+  off_t address = sector << W25_SECTOR_SHIFT;
+
+  /* Check blk_size is power of 2*/
+  assert(((blk_size) & ((blk_size) - 1)) == 0 && (blk_size) > 0);
+  assert((address % blk_size) == 0);
+
+  finfo("sector: %08lx\n", (long)sector);
+
+  /* Wait for any preceding write or erase operation to complete. */
+  w25_waitwritecomplete(priv);
+
+  /* Send write enable instruction */
+  w25_wren(priv);
+
+  /* Select this FLASH part */
+  SPI_SELECT(priv->spi, SPIDEV_FLASH(0), true);
+
+  /* Send Corresponding "Sector Erase (SE)" instruction */
+  switch(blk_size)
+  {
+#ifdef CONFIG_W25_64KB_ERASE
+      case CONFIG_ERASE_64KB:
+            SPI_SEND(priv->spi, W25_BE64);
+            priv->prev_instr = W25_BE64;
+      break;
+#endif
+#ifdef CONFIG_W25_32KB_ERASE
+      case CONFIG_ERASE_32KB:
+            SPI_SEND(priv->spi, W25_BE32);
+            priv->prev_instr = W25_BE32;
+      break;
+#endif
+#ifdef CONFIG_W25_4KB_ERASE
+      case CONFIG_ERASE_4KB:
+            SPI_SEND(priv->spi, W25_SE);
+            priv->prev_instr = W25_SE;
+      break;
+#endif
+      default:
+          assert(0);
+  }
+
+  /* Send the sector address high byte first. Only the most significant bits
+   * (those corresponding to the sector) have any meaning.
+   */
+  SPI_SEND(priv->spi, (address >> 16) & 0xff);
+  SPI_SEND(priv->spi, (address >> 8) & 0xff);
+  SPI_SEND(priv->spi, address & 0xff);
+
+  /* Deselect the FLASH */
+  SPI_SELECT(priv->spi, SPIDEV_FLASH(0), false);
+
+  /* Check if sector is already erased. */
+  if (!w25_is_erased(priv, address, blk_size))
+    {
+      /* Sector already in erased state, crash. */
+      assert(0);
+    }
+}
+
+/****************************************************************************
  * Name: w25_erase
  ****************************************************************************/
-
 static int w25_erase(FAR struct mtd_dev_s *dev,
-                     off_t startblock,
-                     size_t nblocks)
+                      off_t startblock,
+                      size_t nblocks)
 {
-#ifdef CONFIG_W25_READONLY
-  return -EACCES;
-#else
-  FAR struct w25_dev_s *priv = (FAR struct w25_dev_s *)dev;
-  size_t blocksleft = nblocks;
+    #ifdef CONFIG_W25_READONLY
+    return -EACCES;
+    #else
+    FAR struct w25_dev_s *priv = (FAR struct w25_dev_s *)dev;
+    uint32_t sector_size = 1 << W25_SECTOR_SHIFT;  // 4KB
+    uint32_t size = 0;
+    off_t sectors_left = nblocks;
+    off_t size_in_sectors = 0;
+    size_t erased, i;
+#ifdef CONFIG_W25_SECTOR512
+    off_t cacheblock = startblock;
+    size_t blocksleft = nblocks;
+#endif
+    uint32_t granularity[] = {
+              #ifdef CONFIG_ERASE_64KB
+                     CONFIG_ERASE_64KB,
+              #endif
+              #ifdef CONFIG_ERASE_32KB
+                     CONFIG_ERASE_32KB,
+              #endif
+              #ifdef CONFIG_ERASE_4KB
+                     CONFIG_ERASE_4KB,
+              #endif
+    }; // 64KB, 32KB, 4KB
 
-  finfo("startblock: %08lx nblocks: %d\n", (long)startblock, (int)nblocks);
+    finfo("startblock: %08lx nblocks: %d\n", (long)startblock, (int)nblocks);
 
-  /* Lock access to the SPI bus until we complete the erase */
+    /* Lock access to the SPI bus until we complete the erase */
+    w25_lock(priv->spi);
 
-  w25_lock(priv->spi);
-
-  while (blocksleft-- > 0)
+#ifdef CONFIG_W25_SECTOR512
+    while (blocksleft-- > 0)
     {
       /* Erase each sector */
-
-#ifdef CONFIG_W25_SECTOR512
-      w25_cacheerase(priv, startblock);
-#else
-      w25_sectorerase(priv, startblock);
+      w25_cacheerase(priv, cacheblock);
+      cacheblock++;
+    }
 #endif
-      startblock++;
+
+    while (sectors_left > 0)
+    {
+        erased = 0;
+
+        /* Check alignment and adjust if necessary */
+        for (i = 0; i < 3; i++)
+        {
+            size = granularity[i];
+            size_in_sectors = size / sector_size;
+            if (startblock % size_in_sectors == 0 && sectors_left >= size_in_sectors)
+            {
+                w25_blockerase(priv, startblock, size); // Perform the erase operation
+                startblock += size_in_sectors;
+                sectors_left -= size_in_sectors;
+                erased = 1;
+                break;
+            }
+        }
+        /* If no larger size fits or start sector is unaligned, use the smallest size (4KB) */
+        if (!erased)
+        {
+            w25_blockerase(priv, startblock, sector_size);
+            startblock += 1;
+            sectors_left -= 1;
+        }
     }
 
-#ifdef CONFIG_W25_SECTOR512
-  /* Flush the last erase block left in the cache */
+    #ifdef CONFIG_W25_SECTOR512
+    /* Flush the last erase block left in the cache */
+    w25_cacheflush(priv);
+    #endif
 
-  w25_cacheflush(priv);
-#endif
-
-  w25_unlock(priv->spi);
-  return (int)nblocks;
-#endif
+    w25_unlock(priv->spi);
+    return (int)nblocks;
+    #endif
 }
 
 /****************************************************************************

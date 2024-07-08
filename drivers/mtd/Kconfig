@@ -1296,12 +1296,35 @@ config SST39VF_BASE_ADDRESS
 
 endif # MTD_SST39FV
 
-config MTD_W25
+menuconfig MTD_W25
 	bool "SPI-based W25 FLASH"
 	default n
 	select SPI
+	---help---
+		W25 NOR Flash Support.
 
 if MTD_W25
+menuconfig MTD_W25_ERASE_BLOCKS
+	bool "W25 Erase Block Sizes Supported"
+	default y
+	select SPI
+	---help---
+		Enable Supported Block sizes for erase for dynamic
+		erase size selection.
+if MTD_W25_ERASE_BLOCKS
+config W25_4KB_ERASE
+	bool "4KB Erase Command Supported"
+	default y
+
+config W25_32KB_ERASE
+	bool "32KB Erase Command Supported"
+	default n
+
+config W25_64KB_ERASE
+	bool "64KB Erase Command Supported"
+	default n
+
+endif # MTD_W25_ERASE_BLOCKS
 
 config W25_SPIMODE
 	int "W25 SPI Mode"
